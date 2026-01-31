@@ -3,221 +3,378 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notion2Anki Complete - Export & Convert to APKG</title>
+    <title>Notion2Anki Web - MVP</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 30px 20px;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1rem;
+            opacity: 0.95;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h2 i {
+            color: #667eea;
+        }
+
+        .file-drop-zone {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 50px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .file-drop-zone:hover {
+            background: #f8f9fa;
+            border-color: #764ba2;
+        }
+
+        .file-drop-zone.dragover {
+            background: #e7f3ff;
+            border-color: #28a745;
+        }
+
+        .file-drop-zone i {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .file-drop-zone p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .file-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .file-info strong {
+            color: #667eea;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .checkbox-group {
+            margin: 15px 0;
+        }
+
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #dee2e6;
+        }
+
+        .progress-card {
+            display: none;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .progress-card.show {
+            display: block;
+        }
+
+        .progress-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #666;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+
+        .status-message {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            background: #333;
+            color: white;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            max-width: 400px;
+        }
+
+        .status-message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .status-message.success {
+            background: #28a745;
+        }
+
+        .status-message.error {
+            background: #dc3545;
+        }
+
+        .status-message.warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .info-box p {
+            margin: 5px 0;
+            color: #333;
+        }
+
+        .info-box strong {
+            color: #667eea;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <header class="header">
-            <h1><i class="fas fa-brain"></i> Notion2Anki Complete</h1>
-            <p>Export Notion pages directly OR upload ZIP → Convert to Anki APKG</p>
+            <h1><i class="fas fa-brain"></i> Notion2Anki Web - MVP</h1>
+            <p>Import Notion Export (ZIP/HTML) → Auto-detect Note Types → Export APKG</p>
         </header>
 
-        <!-- Tab Navigation -->
-        <div class="tab-navigation">
-            <button class="tab-btn active" onclick="switchTab('export')">
-                <i class="fas fa-download"></i> Export từ Notion
-            </button>
-            <button class="tab-btn" onclick="switchTab('upload')">
-                <i class="fas fa-upload"></i> Upload ZIP/HTML
-            </button>
-        </div>
-
-        <!-- Export Tab -->
-        <div id="exportTab" class="tab-content active">
-            <div class="card">
-                <h2><i class="fas fa-key"></i> 1. Thông tin Notion</h2>
-                
-                <div class="input-group">
-                    <label for="notionToken">
-                        Notion Token (token_v2)
-                        <span class="tooltip" data-tooltip="Tìm trong browser cookies khi đăng nhập Notion">ℹ️</span>
-                    </label>
-                    <div class="input-with-button">
-                        <input 
-                            type="password" 
-                            id="notionToken" 
-                            placeholder="Your Notion token_v2"
-                            autocomplete="off"
-                        >
-                        <button class="btn-icon" onclick="toggleTokenVisibility()">
-                            <i class="fas fa-eye" id="toggleIcon"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="info-box">
-                    <p><strong>Cách lấy Notion Token:</strong></p>
-                    <ol>
-                        <li>Mở Notion và đăng nhập</li>
-                        <li>Mở Developer Tools (F12)</li>
-                        <li>Application → Cookies → notion.so</li>
-                        <li>Tìm cookie <code>token_v2</code> và copy value</li>
-                    </ol>
-                </div>
+        <!-- Upload Section -->
+        <div class="card">
+            <h2><i class="fas fa-upload"></i> 1. Upload Notion Export</h2>
+            
+            <div class="file-drop-zone" id="dropZone">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Kéo thả file ZIP hoặc HTML vào đây<br>hoặc click để chọn file</p>
+                <input type="file" id="fileInput" accept=".zip,.html" style="display:none">
             </div>
 
-            <div class="card">
-                <h2><i class="fas fa-layer-group"></i> 2. Quản lý Pages</h2>
-                
-                <div class="input-group">
-                    <label for="mainDeckName">
-                        <i class="fas fa-folder"></i> Tên Deck Chính (chứa tất cả sub-decks)
-                    </label>
-                    <input type="text" id="mainDeckName" value="Notion Collection" placeholder="Tên deck chính...">
-                </div>
-
-                <!-- Add New Page Form -->
-                <div class="add-page-form">
-                    <h3><i class="fas fa-plus-circle"></i> Thêm Page Mới</h3>
-                    
-                    <div class="form-row">
-                        <div class="input-group flex-1">
-                            <label for="newPageId">Page URL hoặc ID</label>
-                            <input 
-                                type="text" 
-                                id="newPageId" 
-                                placeholder="https://notion.so/... hoặc page-id"
-                            >
-                        </div>
-                        
-                        <div class="input-group flex-1">
-                            <label for="newPageDeckName">Tên Sub-Deck</label>
-                            <input 
-                                type="text" 
-                                id="newPageDeckName" 
-                                placeholder="VD: Japanese::Vocabulary"
-                            >
-                        </div>
-                    </div>
-
-                    <div class="checkbox-group">
-                        <label>
-                            <input type="checkbox" id="newPageRecursive" checked>
-                            <span>Export đệ quy (bao gồm subpages)</span>
-                        </label>
-                    </div>
-
-                    <button class="btn btn-secondary" onclick="addPage()">
-                        <i class="fas fa-plus"></i> Thêm Page
-                    </button>
-                </div>
-
-                <!-- Pages List -->
-                <div class="pages-list" id="pagesList">
-                    <h3><i class="fas fa-list"></i> Danh sách Pages (<span id="pagesCount">0</span>)</h3>
-                    <div id="pagesContainer">
-                        <div class="empty-state">
-                            <i class="fas fa-inbox"></i>
-                            <p>Chưa có page nào. Thêm page đầu tiên của bạn!</p>
-                        </div>
-                    </div>
-                </div>
+            <div class="file-info" id="fileInfo">
+                <p><strong>File:</strong> <span id="fileName"></span></p>
+                <p><strong>Kích thước:</strong> <span id="fileSize"></span></p>
+                <p><strong>Loại:</strong> <span id="fileType"></span></p>
             </div>
 
-            <div class="card">
-                <h2><i class="fas fa-cog"></i> 3. Cài đặt Export</h2>
-
-                <div class="checkbox-group">
-                    <label>
-                        <input type="checkbox" id="autoDetectExport" checked>
-                        <span>Tự động nhận diện Note Type (Basic/Cloze)</span>
-                    </label>
-                </div>
-
-                <div class="checkbox-group">
-                    <label>
-                        <input type="checkbox" id="includeMediaExport" checked>
-                        <span>Bao gồm media (ảnh, video)</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="card">
-                <h2><i class="fas fa-rocket"></i> 4. Export & Convert</h2>
-                <div class="buttons">
-                    <button class="btn btn-primary" onclick="exportAllPages()" id="exportAllBtn" disabled>
-                        <i class="fas fa-magic"></i> Export Tất Cả Pages & Tạo APKG
-                    </button>
-                    <button class="btn btn-secondary" onclick="clearAllPages()">
-                        <i class="fas fa-trash"></i> Xóa Tất Cả
-                    </button>
-                </div>
+            <div class="info-box">
+                <p><strong>Hướng dẫn export từ Notion:</strong></p>
+                <p>1. Mở page trong Notion → Click "..." → Export</p>
+                <p>2. Chọn Export format: <strong>HTML</strong></p>
+                <p>3. Include subpages: Tùy chọn</p>
+                <p>4. Download file ZIP</p>
             </div>
         </div>
 
-        <!-- Upload Tab -->
-        <div id="uploadTab" class="tab-content">
-            <div class="card">
-                <h2><i class="fas fa-cloud-upload-alt"></i> 1. Upload Notion Export</h2>
-                
-                <div class="file-drop-zone" id="dropZone">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>Kéo thả file ZIP hoặc HTML vào đây<br>hoặc click để chọn file</p>
-                    <input type="file" id="fileInput" accept=".zip,.html" style="display:none">
-                </div>
-
-                <div class="file-info" id="fileInfo">
-                    <p><strong>File:</strong> <span id="fileName"></span></p>
-                    <p><strong>Kích thước:</strong> <span id="fileSize"></span></p>
-                    <p><strong>Loại:</strong> <span id="fileType"></span></p>
-                </div>
-
-                <div class="info-box">
-                    <p><strong>Hướng dẫn export từ Notion:</strong></p>
-                    <ol>
-                        <li>Mở page trong Notion → Click "..." → Export</li>
-                        <li>Chọn Export format: <strong>HTML</strong></li>
-                        <li>Include subpages: Tùy chọn</li>
-                        <li>Download file ZIP và upload vào đây</li>
-                    </ol>
-                </div>
+        <!-- Settings Section -->
+        <div class="card">
+            <h2><i class="fas fa-cog"></i> 2. Cài đặt Export</h2>
+            
+            <div class="input-group">
+                <label><i class="fas fa-layer-group"></i> Tên Deck</label>
+                <input type="text" id="deckName" value="Notion" placeholder="Tên deck Anki...">
             </div>
 
-            <div class="card">
-                <h2><i class="fas fa-cog"></i> 2. Cài đặt Export</h2>
-                
-                <div class="input-group">
-                    <label for="deckNameUpload">
-                        <i class="fas fa-layer-group"></i> Tên Deck
-                    </label>
-                    <input type="text" id="deckNameUpload" value="Notion" placeholder="Tên deck Anki...">
-                </div>
-
-                <div class="checkbox-group">
-                    <label>
-                        <input type="checkbox" id="autoDetectUpload" checked>
-                        <span>Tự động nhận diện Note Type (Basic/Cloze)</span>
-                    </label>
-                </div>
-
-                <div class="checkbox-group">
-                    <label>
-                        <input type="checkbox" id="includeMedia" checked>
-                        <span>Bao gồm media (ảnh, video)</span>
-                    </label>
-                </div>
+            <div class="checkbox-group">
+                <label>
+                    <input type="checkbox" id="autoDetect" checked>
+                    <span>Tự động nhận diện Note Type (Basic/Cloze)</span>
+                </label>
             </div>
 
-            <div class="card">
-                <h2><i class="fas fa-download"></i> 3. Export APKG</h2>
-                
-                <div class="buttons">
-                    <button class="btn btn-primary" id="processBtn" disabled onclick="processUploadedFile()">
-                        <i class="fas fa-magic"></i> Xử lý & Export APKG
-                    </button>
-                    <button class="btn btn-secondary" onclick="resetUpload()">
-                        <i class="fas fa-redo"></i> Reset
-                    </button>
-                </div>
+            <div class="checkbox-group">
+                <label>
+                    <input type="checkbox" id="includeMedia" checked>
+                    <span>Bao gồm media (ảnh, video)</span>
+                </label>
             </div>
         </div>
 
-        <!-- Stats Section (shared) -->
+        <!-- Stats Section -->
         <div class="card" id="statsCard" style="display:none;">
-            <h2><i class="fas fa-chart-bar"></i> Thống kê</h2>
+            <h2><i class="fas fa-chart-bar"></i> 3. Thống kê</h2>
             
             <div class="stats-grid">
                 <div class="stat-item">
@@ -237,13 +394,23 @@
                     <div class="stat-label">Media Files</div>
                 </div>
             </div>
+        </div>
 
-            <div id="deckStatsContainer" style="margin-top: 20px;">
-                <!-- Deck-specific stats will be inserted here -->
+        <!-- Export Section -->
+        <div class="card">
+            <h2><i class="fas fa-download"></i> 4. Export APKG</h2>
+            
+            <div class="buttons">
+                <button class="btn btn-primary" id="processBtn" disabled onclick="processAndExport()">
+                    <i class="fas fa-magic"></i> Xử lý & Export APKG
+                </button>
+                <button class="btn btn-secondary" onclick="reset()">
+                    <i class="fas fa-redo"></i> Reset
+                </button>
             </div>
         </div>
 
-        <!-- Progress Card (shared) -->
+        <!-- Progress -->
         <div class="progress-card" id="progressCard">
             <h3><i class="fas fa-spinner fa-spin"></i> <span id="progressTitle">Đang xử lý...</span></h3>
             <div class="progress-bar">
@@ -252,23 +419,15 @@
             <p class="progress-text" id="progressText">Initializing...</p>
         </div>
 
-        <!-- Status Message -->
+        <!-- Status -->
         <div id="statusMessage" class="status-message"></div>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <p>Made with ❤️ for Notion & Anki users | <a href="https://github.com/yourusername/notion2anki-complete" target="_blank">GitHub</a></p>
-            <p class="disclaimer">Uses Notion's unofficial API. Use at your own risk.</p>
-        </footer>
     </div>
 
     <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
-    <!-- App Scripts -->
-    <script src="notion-export.js"></script>
-    <script src="anki-builder.js"></script>
+    <!-- App -->
     <script src="app.js"></script>
 </body>
 </html>

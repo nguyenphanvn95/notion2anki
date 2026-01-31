@@ -2,30 +2,21 @@
 .DS_Store
 Thumbs.db
 
-# IDE
+# Editor
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
-
-# Logs
-*.log
-logs/
 
 # Test files
 test/
 *.test.html
+*.apkg
 
-# Build
-dist/
-build/
+# Logs
+*.log
+npm-debug.log*
 
-# Temporary
-tmp/
-temp/
-
-# User data (don't commit tokens!)
-config.local.js
-secrets.json
-*.token
+# Dependencies (if needed later)
+node_modules/
+package-lock.json
