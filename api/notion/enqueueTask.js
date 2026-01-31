@@ -1,5 +1,4 @@
 // /api/notion/enqueueTask.js
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -14,16 +13,17 @@ export default async function handler(req, res) {
       });
     }
 
-    // Payload chuẩn cho Notion internal API
+    // ⚠️ Payload chuẩn theo Notion schema mới
     const payload = {
       task: {
-        eventName: "exportPage",
+        eventName: "exportBlock",
         request: {
-          pageId: pageId,
+          blockId: pageId,
+          recursive: true,
           exportOptions: {
-            exportType: "html",           // html là ổn nhất để parse
-            timeZone: "Asia/Ho_Chi_Minh",
-            locale: "en"
+            exportType: "html",
+            locale: "en",
+            timeZone: "Asia/Ho_Chi_Minh"
           }
         }
       }
@@ -35,7 +35,8 @@ export default async function handler(req, res) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Cookie": `token_v2=${token}`
+          "Cookie": `token_v2=${token}`,
+          "User-Agent": "Mozilla/5.0"
         },
         body: JSON.stringify(payload)
       }
@@ -43,15 +44,22 @@ export default async function handler(req, res) {
 
     const data = await notionRes.json();
 
-    // Debug nhẹ nếu cần
-    if (!data || !data.taskId) {
+    // ✅ Với schema mới, taskId nằm trong taskId hoặc taskIds[0]
+    const taskId =
+      data?.taskId ||
+      (Array.isArray(data?.taskIds) ? data.taskIds[0] : null);
+
+    if (!taskId) {
       return res.status(500).json({
         error: "Notion did not return taskId",
         raw: data
       });
     }
 
-    return res.status(200).json(data);
+    return res.status(200).json({
+      taskId,
+      raw: data
+    });
 
   } catch (err) {
     console.error("enqueueTask error:", err);
