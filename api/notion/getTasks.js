@@ -1,56 +1,40 @@
-// Vercel Serverless Function
-// Proxy for Notion internal getTasks API.
+// /api/notion/getTasks.js
 
-const NOTION_GET_TASK_ENDPOINT = 'https://www.notion.so/api/v3/getTasks';
-
-module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.statusCode = 405;
-    return res.end('Method Not Allowed');
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const { token, taskIds } = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    const { token, taskIds } = req.body || {};
 
-    if (!token || typeof token !== 'string') {
-      res.statusCode = 400;
-      return res.json({ error: 'Missing token (token_v2).' });
-    }
+    if (!token) return res.status(400).json({ error: "Missing token" });
     if (!Array.isArray(taskIds) || taskIds.length === 0) {
-      res.statusCode = 400;
-      return res.json({ error: 'Missing taskIds.' });
+      return res.status(400).json({ error: "Missing taskIds" });
     }
 
-    const upstream = await fetch(NOTION_GET_TASK_ENDPOINT, {
-      method: 'POST',
+    const notionRes = await fetch("https://www.notion.so/api/v3/getTasks", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'notion2anki-vercel-proxy/1.0',
-        'Cookie': `token_v2=${token}`,
-        'Origin': 'https://www.notion.so',
-        'Referer': 'https://www.notion.so',
+        "Content-Type": "application/json",
+        "Cookie": `token_v2=${token}`,
+        "User-Agent": "Mozilla/5.0",
+        "Origin": "https://www.notion.so",
+        "Referer": "https://www.notion.so/",
       },
       body: JSON.stringify({ taskIds }),
     });
 
-    if (upstream.status === 401) {
-      res.statusCode = 401;
-      return res.json({ error: 'Invalid token_v2.' });
-    }
+    const data = await notionRes.json();
 
-    const text = await upstream.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      res.statusCode = 502;
-      return res.json({ error: 'Upstream non-JSON response', raw: text.slice(0, 500) });
-    }
+    // Nếu complete -> bóc exportURL giống addon
+    const first = Array.isArray(data?.results) ? data.results[0] : null;
+    const exportURL =
+      first?.status?.type === "complete" ? first.status.exportURL : null;
 
-    res.statusCode = upstream.ok ? 200 : upstream.status;
-    return res.json(data);
-  } catch (e) {
-    res.statusCode = 500;
-    return res.json({ error: 'Proxy failed', message: e?.message || String(e) });
+    return res.status(200).json({ ...data, exportURL });
+  } catch (err) {
+    console.error("getTasks error:", err);
+    return res.status(500).json({ error: "Internal server error", detail: err.message });
   }
-};
+}
