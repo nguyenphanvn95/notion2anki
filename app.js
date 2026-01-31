@@ -476,9 +476,7 @@ async function exportAllPages() {
             if (failedPages && failedPages.length > 0) {
                 const first = failedPages[0];
                 const hint = (first && first.error && String(first.error).includes('User cannot access block'))
-                  ? "
-
-Gợi ý: Page này không thuộc quyền truy cập của token_v2 hiện tại. Hãy mở page trên Notion bằng đúng tài khoản, hoặc Duplicate page sang workspace của bạn, hoặc Share page với tài khoản đó (Full access)."
+                  ? `\n\nGợi ý: Page này không thuộc quyền truy cập của token_v2 hiện tại. Hãy mở page trên Notion bằng đúng tài khoản, hoặc Duplicate page sang workspace của bạn, hoặc Share page với tài khoản đó (Full access).`
                   : "";
                 showStatus(`Không export được page nào. Lỗi mẫu: ${first.name || ''} - ${first.error || 'Unknown error'}${hint}`, 'error');
                 return;
