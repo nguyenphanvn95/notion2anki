@@ -1,261 +1,231 @@
-# 🚀 Quick Start Guide
+# Hướng Dẫn Nhanh - Notion2Anki Multi-Page
 
-Get started with Notion2Anki Complete in 5 minutes!
+## 🎯 Tính năng mới: Export nhiều trang cùng lúc!
 
-## Method 1: Upload Exported File (Recommended)
+### ⚡ Hướng dẫn nhanh 5 bước
 
-### Step 1: Export from Notion
+#### 1️⃣ Lấy Notion Token
+```
+Notion.so → F12 → Application → Cookies → notion.so → token_v2
+```
+Copy giá trị token_v2
 
-1. Open your Notion page with flashcards
-2. Click the "..." menu (top right)
-3. Select "Export"
-4. Choose these settings:
-   - **Export format**: HTML
-   - **Include subpages**: Your choice
-   - **Create folders for subpages**: Your choice
-5. Click "Export"
-6. Download the ZIP file
+#### 2️⃣ Nhập Token
+Paste token vào ô "Notion Token (token_v2)"
 
-### Step 2: Convert to APKG
+#### 3️⃣ Thêm Pages
+Cho mỗi page bạn muốn export:
+- **Page URL/ID**: Nhập link hoặc ID của page Notion
+  - VD URL: `https://notion.so/My-Page-abc123def456...`
+  - VD ID: `abc123def456...`
+  
+- **Tên Sub-Deck**: Tên deck cho page này
+  - VD: `Japanese::Vocabulary`
+  - VD: `Math::Calculus`
+  - VD: `History::World War II`
+  
+- **Export đệ quy**: Tick nếu muốn bao gồm cả subpages
 
-1. Open the Notion2Anki website
-2. Go to "Upload ZIP/HTML" tab
-3. Drag and drop your ZIP file (or click to browse)
-4. (Optional) Change deck name
-5. Click "Process & Export APKG"
-6. Wait for download to complete
+Click **"Thêm Page"**
 
-### Step 3: Import to Anki
+#### 4️⃣ Quản lý Pages
+- ✏️ **Sửa**: Thay đổi tên deck hoặc cài đặt
+- 🗑️ **Xóa**: Xóa page khỏi danh sách  
+- 🔄 **Xóa tất cả**: Reset toàn bộ danh sách
 
-1. Open Anki
-2. File → Import
-3. Select the downloaded .apkg file
-4. Click "Import"
-5. Done! Start studying! 🎉
+#### 5️⃣ Export
+- Nhập **"Tên Deck Chính"** (deck cha chứa tất cả sub-decks)
+- Click **"Export Tất Cả Pages & Tạo APKG"**
+- Đợi hoàn thành và tải file APKG
 
 ---
 
-## Method 2: Direct Export from Notion
+## 📚 Ví dụ cụ thể
 
-### Step 1: Get Notion Token
+### Ví dụ 1: Học tiếng Nhật
 
-1. Open [Notion](https://notion.so) in Chrome/Firefox
-2. Press `F12` (or Right-click → Inspect)
-3. Go to **Application** tab (Chrome) or **Storage** tab (Firefox)
-4. Click **Cookies** → `https://www.notion.so`
-5. Find cookie named `token_v2`
-6. **Copy the entire Value** (long string)
+**Setup:**
+1. Token: (token của bạn)
+2. Deck chính: `Japanese Study`
 
-⚠️ **Security Warning**: Keep this token private! It gives full access to your Notion account.
+**Thêm pages:**
+- Page 1:
+  - URL: `https://notion.so/N5-Vocabulary-abc123...`
+  - Sub-deck: `N5::Vocabulary`
+  - Đệ quy: ✓
 
-### Step 2: Get Page ID
+- Page 2:
+  - URL: `https://notion.so/N5-Grammar-def456...`
+  - Sub-deck: `N5::Grammar`
+  - Đệ quy: ✓
 
-**Option A: From URL**
+- Page 3:
+  - URL: `https://notion.so/Kanji-ghi789...`
+  - Sub-deck: `Kanji::Basic`
+  - Đệ quy: ✓
+
+**Kết quả trong Anki:**
 ```
-https://notion.so/workspace/Page-Title-abc123def456ghi789
-                                         ^^^^^^^^^^^^^^^^^^
-                                         This is your page ID
-```
-
-**Option B: Just use full URL**
-- The app will automatically extract the ID
-
-### Step 3: Export
-
-1. Go to "Export from Notion" tab
-2. Paste your token
-3. Paste page URL or ID
-4. Choose recursive export (if you want subpages)
-5. Click "Export from Notion & Create APKG"
-6. Wait for download
-
-### Step 4: Import to Anki
-
-Same as Method 1, Step 3 above.
-
----
-
-## 📝 How to Create Flashcards in Notion
-
-### Basic Cards (Q&A)
-
-Use toggle blocks:
-
-```
-▶ Question here?
-  Answer here
+Japanese Study
+├── N5::Vocabulary (50 cards)
+├── N5::Grammar (30 cards)
+└── Kanji::Basic (40 cards)
 ```
 
-**Example:**
-```
-▶ What is the capital of France?
-  Paris. It's also known as the City of Light.
-```
+### Ví dụ 2: Học lập trình
 
-### Cloze Deletions (Fill-in-the-Blank)
+**Setup:**
+1. Deck chính: `Programming`
 
-Use Anki cloze syntax:
+**Thêm pages:**
+- Page 1:
+  - URL: `page-id-python-basics`
+  - Sub-deck: `Python::Basics`
+  
+- Page 2:
+  - URL: `page-id-python-oop`
+  - Sub-deck: `Python::OOP`
+  
+- Page 3:
+  - URL: `page-id-algorithms`
+  - Sub-deck: `Algorithms::Sorting`
 
+**Kết quả:**
 ```
-▶ {{c1::Paris}} is the capital of {{c2::France}}.
-  Additional notes (optional)
-```
-
-**Example:**
-```
-▶ The {{c1::mitochondria}} is the {{c2::powerhouse}} of the cell.
-  It produces ATP through cellular respiration.
-```
-
-### With Images
-
-Just add images inside your toggle blocks:
-
-```
-▶ What animal is this?
-  [Image of a dog]
-  This is a dog.
+Programming
+├── Python::Basics
+├── Python::OOP
+└── Algorithms::Sorting
 ```
 
 ---
 
-## 🎯 Tips for Best Results
+## 🎨 Định dạng Notion
 
-### Notion Page Structure
+### ✅ Basic Cards (Câu hỏi - Trả lời)
 
-✅ **Good:**
+Trong Notion, tạo **Toggle block**:
+
 ```
-Main Page
-  ▶ Toggle 1: Question 1
-    Answer 1
-  ▶ Toggle 2: Question 2
-    Answer 2
-  ▶ Toggle 3: Question 3
-    Answer 3
+▶ What is React?
+  A JavaScript library for building user interfaces
 ```
 
-❌ **Bad:**
+→ Tạo flashcard với:
+- Front: "What is React?"
+- Back: "A JavaScript library for building user interfaces"
+
+### ✅ Cloze Cards (Điền vào chỗ trống)
+
+Sử dụng cú pháp `{{c1::text}}`:
+
 ```
-Main Page
-  - Bullet point 1
-  - Bullet point 2
-  Regular paragraph text
+▶ React is a {{c1::JavaScript library}} for building {{c2::user interfaces}}
+  Created by Facebook
 ```
 
-### Toggle Block Best Practices
-
-1. **Keep questions concise**: Short, clear questions work best
-2. **One concept per card**: Don't pack too much into one card
-3. **Use formatting**: Bold, italic, code blocks all work
-4. **Add context**: Extra info in the answer helps retention
-
-### Cloze Tips
-
-1. **Number your clozes**: `{{c1::}}`, `{{c2::}}`, etc.
-2. **Group related info**: Use same number for related deletions
-3. **Don't overdo it**: 2-3 deletions per card is optimal
+→ Tạo 2 cloze cards:
+1. React is a **[...]** for building user interfaces
+2. React is a JavaScript library for building **[...]**
 
 ---
 
-## ⚠️ Common Issues
+## 💡 Tips & Tricks
 
-### "No toggle blocks found"
+### 📌 Tổ chức Deck tốt hơn
 
-**Problem**: Your Notion page doesn't have toggle blocks.
+**Tốt:**
+```
+Main Deck::Sub Category::Specific Topic
+```
 
-**Solution**: Use toggle blocks (▶) to create flashcards.
+**Ví dụ:**
+- `Language::Japanese::N5::Vocabulary`
+- `Programming::Python::Data Structures`
+- `Math::Calculus::Derivatives`
 
-### "CORS error"
+### 🎯 Đặt tên Sub-Deck
 
-**Problem**: Browser blocking direct Notion API access.
+**Nên:**
+- Ngắn gọn, rõ ràng
+- Sử dụng `::` để phân cấp
+- Tiếng Anh (tốt hơn cho compatibility)
 
-**Solution**: Use Method 1 (Upload File) instead.
+**Không nên:**
+- Quá dài
+- Ký tự đặc biệt: `/`, `\`, `<`, `>`
+- Khoảng trắng đầu/cuối
 
-### "Invalid token"
+### ⚡ Tăng tốc độ
 
-**Problem**: Token is wrong or expired.
-
-**Solution**: 
-1. Get a fresh token from browser cookies
-2. Make sure you copied the entire value
-3. Check you're logged into Notion
-
-### "No HTML file found"
-
-**Problem**: ZIP file doesn't contain HTML.
-
-**Solution**: Make sure to export as HTML format, not Markdown.
-
----
-
-## 📱 Browser Compatibility
-
-✅ **Fully Supported:**
-- Chrome/Chromium
-- Firefox
-- Edge
-- Safari
-
-⚠️ **Partial Support:**
-- Older browsers (update recommended)
-
-❌ **Not Supported:**
-- Internet Explorer
+1. **Chuẩn bị trước:**
+   - Collect tất cả Page IDs
+   - Nghĩ tên deck trước
+   
+2. **Thêm hàng loạt:**
+   - Copy/paste nhanh
+   - Sử dụng pattern nhất quán
+   
+3. **Lưu cấu hình:**
+   - Pages tự động lưu
+   - Không cần nhập lại
 
 ---
 
-## 🎓 Example Workflows
+## ❓ Câu hỏi thường gặp
 
-### For Students
+### Q: Có giới hạn số pages không?
+A: Không có giới hạn! Nhưng nhiều pages = thời gian export lâu hơn.
 
-1. Take notes in Notion during lecture
-2. Use toggle blocks for key concepts
-3. Export at end of week
-4. Import to Anki for review
+### Q: Page ID lấy ở đâu?
+A: Trong URL của page Notion:
+```
+https://notion.so/My-Page-abc123def456ghi789...
+                          ^^^^^^^^^^^^^^^^^^^^
+                               Page ID
+```
 
-### For Language Learners
+### Q: Có thể export page riêng tư không?
+A: Có, miễn bạn có quyền truy cập (token_v2 có quyền).
 
-1. Create vocabulary list in Notion
-2. Format as toggles (word → translation)
-3. Add images for visual learning
-4. Export and study in Anki
+### Q: Lỗi "No toggle blocks found"?
+A: Đảm bảo sử dụng **Toggle blocks** (icon ▶) trong Notion, không phải heading hay text thường.
 
-### For Professionals
+### Q: Có thể sửa page sau khi thêm không?
+A: Có! Click nút "Sửa" để chỉnh sửa tên deck hoặc cài đặt đệ quy.
 
-1. Build knowledge base in Notion
-2. Create Q&A for important concepts
-3. Regular exports to Anki
-4. Spaced repetition for retention
-
----
-
-## 🔄 Regular Workflow
-
-1. **Create/Update** notes in Notion
-2. **Export** when ready (weekly/monthly)
-3. **Import** to Anki
-4. **Study** with spaced repetition
-5. **Repeat** as needed
+### Q: Danh sách pages có bị mất khi tắt browser không?
+A: Không! Pages được lưu tự động vào localStorage.
 
 ---
 
-## 💡 Pro Tips
+## 🚨 Lưu ý quan trọng
 
-1. **Deck Organization**: Use clear deck names
-2. **Tags**: Add tags in Notion for better organization
-3. **Media**: Compress large images before adding
-4. **Backup**: Keep your .apkg files as backups
-5. **Updates**: Re-export to update existing decks
+### ⚠️ Token Security
+- **KHÔNG CHIA SẺ** token_v2
+- Token = full access vào Notion
+- Chỉ dùng trên máy cá nhân
+
+### ⚠️ CORS Issues
+Nếu gặp lỗi CORS:
+1. Dùng method **Upload ZIP/HTML**
+2. Export từ Notion → Upload vào tool
+
+### ⚠️ Rate Limits
+- Notion có rate limit
+- Nếu export quá nhiều pages → có thể bị chặn tạm thời
+- Giải pháp: Chia nhỏ, export từng batch
 
 ---
 
-## 🆘 Need More Help?
+## 📞 Hỗ trợ
 
-- 📖 [Full Documentation](README.md)
-- 🐛 [Report Issues](https://github.com/yourusername/notion2anki/issues)
-- 💬 [Community Forum](https://github.com/yourusername/notion2anki/discussions)
-- 📧 [Email Support](mailto:support@example.com)
+Gặp vấn đề? Hãy:
+1. Đọc lại hướng dẫn
+2. Check phần Troubleshooting trong README.md
+3. Tạo GitHub Issue
+4. Email: your-email@example.com
 
 ---
 
-**You're all set! Happy studying!** 📚✨
+**Happy Learning! 🎓**

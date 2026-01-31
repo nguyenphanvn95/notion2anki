@@ -1,11 +1,32 @@
 /**
- * Main Application Logic
+ * Main Application Logic - Multi-Page Support
  * Handles UI interactions and coordinates between modules
  */
 
 // Global state
 let uploadedFile = null;
 let currentMediaFiles = {};
+let pages = []; // Array of page objects: { id, pageId, deckName, recursive }
+let nextPageId = 1;
+
+// ===== LOCAL STORAGE =====
+
+function savePages() {
+    localStorage.setItem('notion2anki_pages', JSON.stringify(pages));
+}
+
+function loadPages() {
+    const saved = localStorage.getItem('notion2anki_pages');
+    if (saved) {
+        try {
+            pages = JSON.parse(saved);
+            nextPageId = Math.max(...pages.map(p => p.id), 0) + 1;
+            renderPages();
+        } catch (e) {
+            console.error('Error loading saved pages:', e);
+        }
+    }
+}
 
 // ===== UTILITY FUNCTIONS =====
 
@@ -40,6 +61,46 @@ function updateStats(stats) {
     document.getElementById('clozeNotes').textContent = stats.cloze || 0;
     document.getElementById('mediaCount').textContent = stats.media || 0;
     document.getElementById('statsCard').style.display = 'block';
+    
+    // Update deck-specific stats if available
+    if (stats.deckStats) {
+        renderDeckStats(stats.deckStats);
+    }
+}
+
+function renderDeckStats(deckStats) {
+    const container = document.getElementById('deckStatsContainer');
+    if (!deckStats || deckStats.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    let html = '<div class="deck-stats"><h3>📊 Thống kê theo Deck</h3>';
+    
+    deckStats.forEach(deck => {
+        html += `
+            <div class="deck-stat-item">
+                <h4>${deck.name}</h4>
+                <div class="deck-stat-grid">
+                    <div>
+                        <strong>${deck.total}</strong>
+                        <span>Tổng</span>
+                    </div>
+                    <div>
+                        <strong>${deck.basic}</strong>
+                        <span>Basic</span>
+                    </div>
+                    <div>
+                        <strong>${deck.cloze}</strong>
+                        <span>Cloze</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
 }
 
 // ===== TAB SWITCHING =====
@@ -79,6 +140,206 @@ function toggleTokenVisibility() {
         tokenInput.type = 'password';
         toggleIcon.className = 'fas fa-eye';
     }
+}
+
+// ===== PAGE MANAGEMENT =====
+
+function extractPageId(input) {
+    // Extract page ID from URL or just return if it's already an ID
+    if (!input) return '';
+    
+    // If it's a URL, extract the ID
+    const urlMatch = input.match(/([a-f0-9]{32})|([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+    if (urlMatch) {
+        return urlMatch[0].replace(/-/g, '');
+    }
+    
+    // Otherwise, assume it's already an ID
+    return input.replace(/-/g, '');
+}
+
+function addPage() {
+    const pageIdInput = document.getElementById('newPageId').value.trim();
+    const deckName = document.getElementById('newPageDeckName').value.trim();
+    const recursive = document.getElementById('newPageRecursive').checked;
+    
+    if (!pageIdInput) {
+        showStatus('Vui lòng nhập Page URL hoặc ID', 'error');
+        return;
+    }
+    
+    if (!deckName) {
+        showStatus('Vui lòng nhập tên sub-deck', 'error');
+        return;
+    }
+    
+    const pageId = extractPageId(pageIdInput);
+    
+    // Check for duplicates
+    if (pages.some(p => p.pageId === pageId)) {
+        showStatus('Page này đã tồn tại trong danh sách', 'warning');
+        return;
+    }
+    
+    const page = {
+        id: nextPageId++,
+        pageId: pageId,
+        deckName: deckName,
+        recursive: recursive
+    };
+    
+    pages.push(page);
+    savePages();
+    renderPages();
+    
+    // Clear form
+    document.getElementById('newPageId').value = '';
+    document.getElementById('newPageDeckName').value = '';
+    document.getElementById('newPageRecursive').checked = true;
+    
+    showStatus('✓ Đã thêm page thành công', 'success');
+}
+
+function deletePage(id) {
+    if (!confirm('Bạn có chắc muốn xóa page này?')) return;
+    
+    pages = pages.filter(p => p.id !== id);
+    savePages();
+    renderPages();
+    showStatus('✓ Đã xóa page', 'success');
+}
+
+function editPage(id) {
+    const page = pages.find(p => p.id === id);
+    if (!page) return;
+    
+    page.editing = true;
+    renderPages();
+}
+
+function savePage(id) {
+    const page = pages.find(p => p.id === id);
+    if (!page) return;
+    
+    const deckName = document.getElementById(`edit-deck-${id}`).value.trim();
+    const recursive = document.getElementById(`edit-recursive-${id}`).checked;
+    
+    if (!deckName) {
+        showStatus('Tên deck không được để trống', 'error');
+        return;
+    }
+    
+    page.deckName = deckName;
+    page.recursive = recursive;
+    page.editing = false;
+    
+    savePages();
+    renderPages();
+    showStatus('✓ Đã lưu thay đổi', 'success');
+}
+
+function cancelEdit(id) {
+    const page = pages.find(p => p.id === id);
+    if (!page) return;
+    
+    page.editing = false;
+    renderPages();
+}
+
+function clearAllPages() {
+    if (pages.length === 0) {
+        showStatus('Danh sách đã trống', 'info');
+        return;
+    }
+    
+    if (!confirm('Bạn có chắc muốn xóa tất cả pages?')) return;
+    
+    pages = [];
+    savePages();
+    renderPages();
+    showStatus('✓ Đã xóa tất cả pages', 'success');
+}
+
+function renderPages() {
+    const container = document.getElementById('pagesContainer');
+    const countEl = document.getElementById('pagesCount');
+    const exportBtn = document.getElementById('exportAllBtn');
+    
+    countEl.textContent = pages.length;
+    exportBtn.disabled = pages.length === 0;
+    
+    if (pages.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>Chưa có page nào. Thêm page đầu tiên của bạn!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    pages.forEach(page => {
+        const editClass = page.editing ? 'editing' : '';
+        html += `
+            <div class="page-item ${editClass}">
+                <div class="page-header">
+                    <div class="page-info">
+                        <div class="page-title">
+                            <i class="fas fa-file-alt"></i> ${page.deckName}
+                        </div>
+                        <div class="page-deck-name">
+                            Sub-deck: ${page.deckName}
+                        </div>
+                        <div class="page-id-display">
+                            ID: ${page.pageId.substring(0, 8)}...${page.pageId.substring(page.pageId.length - 4)}
+                        </div>
+                    </div>
+                    <div class="page-actions">
+                        ${!page.editing ? `
+                            <button class="btn-edit" onclick="editPage(${page.id})">
+                                <i class="fas fa-edit"></i> Sửa
+                            </button>
+                            <button class="btn-delete" onclick="deletePage(${page.id})">
+                                <i class="fas fa-trash"></i> Xóa
+                            </button>
+                        ` : `
+                            <button class="btn-save" onclick="savePage(${page.id})">
+                                <i class="fas fa-check"></i> Lưu
+                            </button>
+                            <button class="btn-cancel" onclick="cancelEdit(${page.id})">
+                                <i class="fas fa-times"></i> Hủy
+                            </button>
+                        `}
+                    </div>
+                </div>
+                
+                <div class="page-metadata">
+                    <label>
+                        <i class="fas fa-layer-group"></i>
+                        ${page.recursive ? 'Có subpages' : 'Chỉ page chính'}
+                    </label>
+                </div>
+                
+                ${page.editing ? `
+                    <div class="edit-form show">
+                        <div class="input-group">
+                            <label>Tên Sub-Deck</label>
+                            <input type="text" id="edit-deck-${page.id}" value="${page.deckName}">
+                        </div>
+                        <div class="checkbox-group">
+                            <label>
+                                <input type="checkbox" id="edit-recursive-${page.id}" ${page.recursive ? 'checked' : ''}>
+                                <span>Export đệ quy (bao gồm subpages)</span>
+                            </label>
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
 }
 
 // ===== FILE UPLOAD HANDLING =====
@@ -139,62 +400,99 @@ function resetUpload() {
     showStatus('Reset complete. Upload a new file.', 'info');
 }
 
-// ===== EXPORT FROM NOTION =====
+// ===== EXPORT ALL PAGES FROM NOTION =====
 
-async function exportFromNotion() {
+async function exportAllPages() {
     const token = document.getElementById('notionToken').value.trim();
-    const pageUrl = document.getElementById('notionPageUrl').value.trim();
-    const recursive = document.getElementById('recursiveExport').checked;
-    const deckName = document.getElementById('deckNameExport').value.trim() || 'Notion';
+    const mainDeckName = document.getElementById('mainDeckName').value.trim() || 'Notion Collection';
     
     // Validate inputs
     if (!token) {
-        showStatus('Please enter your Notion token', 'error');
+        showStatus('Vui lòng nhập Notion token', 'error');
         return;
     }
     
-    if (!pageUrl) {
-        showStatus('Please enter a page URL or ID', 'error');
+    if (pages.length === 0) {
+        showStatus('Vui lòng thêm ít nhất một page', 'error');
         return;
     }
     
     try {
-        showStatus('Starting export from Notion...', 'info');
-        updateProgress(0, 'Initializing...');
+        showStatus('Bắt đầu export từ Notion...', 'info');
+        updateProgress(0, 'Đang khởi tạo...');
         
-        // Export from Notion
-        const { html, media } = await exportPageFromNotion(token, pageUrl, recursive);
-        currentMediaFiles = media;
+        let allNotes = [];
+        let allMedia = {};
+        const deckStats = [];
         
-        updateProgress(92, 'Parsing HTML...');
+        // Export each page
+        for (let i = 0; i < pages.length; i++) {
+            const page = pages[i];
+            const progress = ((i / pages.length) * 80).toFixed(0);
+            
+            updateProgress(progress, `Đang export page ${i + 1}/${pages.length}: ${page.deckName}...`);
+            
+            try {
+                // Export from Notion
+                const { html, media } = await exportPageFromNotion(token, page.pageId, page.recursive);
+                
+                // Parse notes
+                const parsedNotes = parseHtmlToNotes(html);
+                
+                // Add deck name to each note
+                const deckName = `${mainDeckName}::${page.deckName}`;
+                parsedNotes.forEach(note => {
+                    note.deck = deckName;
+                });
+                
+                allNotes = allNotes.concat(parsedNotes);
+                
+                // Merge media
+                Object.assign(allMedia, media);
+                
+                // Track stats for this deck
+                const basicCount = parsedNotes.filter(n => !n.isCloze).length;
+                const clozeCount = parsedNotes.filter(n => n.isCloze).length;
+                
+                deckStats.push({
+                    name: page.deckName,
+                    total: parsedNotes.length,
+                    basic: basicCount,
+                    cloze: clozeCount
+                });
+                
+            } catch (error) {
+                console.error(`Error exporting page ${page.deckName}:`, error);
+                showStatus(`⚠️ Lỗi khi export page "${page.deckName}": ${error.message}`, 'warning');
+                // Continue with other pages
+            }
+        }
         
-        // Parse notes
-        const parsedNotes = parseHtmlToNotes(html);
-        
-        if (parsedNotes.length === 0) {
+        if (allNotes.length === 0) {
             hideProgress();
-            showStatus('No toggle blocks found. Please use toggle blocks in your Notion page.', 'error');
+            showStatus('Không tìm thấy toggle blocks nào. Vui lòng sử dụng toggle blocks trong Notion pages.', 'error');
             return;
         }
         
         // Update stats
-        const basicCount = parsedNotes.filter(n => !n.isCloze).length;
-        const clozeCount = parsedNotes.filter(n => n.isCloze).length;
+        const basicCount = allNotes.filter(n => !n.isCloze).length;
+        const clozeCount = allNotes.filter(n => n.isCloze).length;
         
         updateStats({
-            total: parsedNotes.length,
+            total: allNotes.length,
             basic: basicCount,
             cloze: clozeCount,
-            media: Object.keys(media).length
+            media: Object.keys(allMedia).length,
+            deckStats: deckStats
         });
         
-        updateProgress(95, 'Building APKG...');
+        updateProgress(90, 'Đang xây dựng APKG...');
         
         // Build APKG
-        const result = await buildApkg(parsedNotes, media, deckName);
+        const result = await buildApkg(allNotes, allMedia, mainDeckName);
         
         hideProgress();
-        showStatus(`✓ Success! Exported ${result.noteCount} notes to ${result.filename}`, 'success');
+        showStatus(`✓ Thành công! Đã export ${result.noteCount} notes từ ${pages.length} pages vào ${result.filename}`, 'success');
         
     } catch (error) {
         console.error('Export error:', error);
@@ -204,10 +502,10 @@ async function exportFromNotion() {
         
         // Provide helpful error messages
         if (errorMessage.includes('CORS')) {
-            errorMessage += '\n\n💡 Tip: Due to browser CORS restrictions, direct export may not work. Please either:\n1. Use the "Upload ZIP/HTML" tab and upload an exported file from Notion, OR\n2. Use our backend server (see README for setup)';
+            errorMessage += '\n\n💡 Tip: Do hạn chế CORS của trình duyệt, export trực tiếp có thể không hoạt động. Vui lòng:\n1. Sử dụng tab "Upload ZIP/HTML" và upload file đã export từ Notion, HOẶC\n2. Sử dụng backend server của chúng tôi (xem README để cài đặt)';
         }
         
-        showStatus(`❌ Error: ${errorMessage}`, 'error');
+        showStatus(`❌ Lỗi: ${errorMessage}`, 'error');
     }
 }
 
@@ -215,28 +513,28 @@ async function exportFromNotion() {
 
 async function processUploadedFile() {
     if (!uploadedFile) {
-        showStatus('Please upload a file first', 'error');
+        showStatus('Vui lòng upload file trước', 'error');
         return;
     }
     
     const deckName = document.getElementById('deckNameUpload').value.trim() || 'Notion';
     
     try {
-        updateProgress(0, 'Starting...');
+        updateProgress(0, 'Đang bắt đầu...');
         
         // Extract HTML
         let html;
         let media = {};
         
         if (uploadedFile.name.endsWith('.zip')) {
-            updateProgress(5, 'Extracting ZIP...');
+            updateProgress(5, 'Đang giải nén ZIP...');
             
             const zip = await JSZip.loadAsync(uploadedFile);
             
             // Find HTML file
             const htmlFile = Object.keys(zip.files).find(name => name.endsWith('.html'));
             if (!htmlFile) {
-                throw new Error('No HTML file found in ZIP');
+                throw new Error('Không tìm thấy file HTML trong ZIP');
             }
             
             html = await zip.files[htmlFile].async('string');
@@ -252,14 +550,14 @@ async function processUploadedFile() {
             html = await uploadedFile.text();
         }
         
-        updateProgress(10, 'Parsing HTML...');
+        updateProgress(10, 'Đang phân tích HTML...');
         
         // Parse notes
         const parsedNotes = parseHtmlToNotes(html);
         
         if (parsedNotes.length === 0) {
             hideProgress();
-            showStatus('No toggle blocks found. Please use toggle blocks in your Notion page.', 'error');
+            showStatus('Không tìm thấy toggle blocks. Vui lòng sử dụng toggle blocks trong Notion page.', 'error');
             return;
         }
         
@@ -278,21 +576,24 @@ async function processUploadedFile() {
         const result = await buildApkg(parsedNotes, media, deckName);
         
         hideProgress();
-        showStatus(`✓ Success! Exported ${result.noteCount} notes to ${result.filename}`, 'success');
+        showStatus(`✓ Thành công! Đã export ${result.noteCount} notes vào ${result.filename}`, 'success');
         
     } catch (error) {
         console.error('Processing error:', error);
         hideProgress();
-        showStatus(`❌ Error: ${error.message}`, 'error');
+        showStatus(`❌ Lỗi: ${error.message}`, 'error');
     }
 }
 
 // ===== INITIALIZATION =====
 
-console.log('Notion2Anki Complete loaded successfully');
-console.log('Version: 1.0.0');
+console.log('Notion2Anki Complete Multi-Page loaded successfully');
+console.log('Version: 2.0.0 - Multi-Page Support');
+
+// Load saved pages on startup
+loadPages();
 
 // Show welcome message
 setTimeout(() => {
-    showStatus('Welcome to Notion2Anki! Choose a tab to get started.', 'info');
+    showStatus('Chào mừng đến với Notion2Anki! Chọn tab để bắt đầu.', 'info');
 }, 500);

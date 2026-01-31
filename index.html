@@ -48,25 +48,6 @@
                     </div>
                 </div>
 
-                <div class="input-group">
-                    <label for="notionPageUrl">
-                        Page URL hoặc Page ID
-                        <span class="tooltip" data-tooltip="VD: https://notion.so/Page-Name-abc123... hoặc chỉ abc123...">ℹ️</span>
-                    </label>
-                    <input 
-                        type="text" 
-                        id="notionPageUrl" 
-                        placeholder="https://notion.so/... hoặc page-id"
-                    >
-                </div>
-
-                <div class="checkbox-group">
-                    <label>
-                        <input type="checkbox" id="recursiveExport" checked>
-                        <span>Export đệ quy (bao gồm subpages)</span>
-                    </label>
-                </div>
-
                 <div class="info-box">
                     <p><strong>Cách lấy Notion Token:</strong></p>
                     <ol>
@@ -79,14 +60,65 @@
             </div>
 
             <div class="card">
-                <h2><i class="fas fa-cog"></i> 2. Cài đặt Deck</h2>
+                <h2><i class="fas fa-layer-group"></i> 2. Quản lý Pages</h2>
                 
                 <div class="input-group">
-                    <label for="deckNameExport">
-                        <i class="fas fa-layer-group"></i> Tên Deck
+                    <label for="mainDeckName">
+                        <i class="fas fa-folder"></i> Tên Deck Chính (chứa tất cả sub-decks)
                     </label>
-                    <input type="text" id="deckNameExport" value="Notion" placeholder="Tên deck Anki...">
+                    <input type="text" id="mainDeckName" value="Notion Collection" placeholder="Tên deck chính...">
                 </div>
+
+                <!-- Add New Page Form -->
+                <div class="add-page-form">
+                    <h3><i class="fas fa-plus-circle"></i> Thêm Page Mới</h3>
+                    
+                    <div class="form-row">
+                        <div class="input-group flex-1">
+                            <label for="newPageId">Page URL hoặc ID</label>
+                            <input 
+                                type="text" 
+                                id="newPageId" 
+                                placeholder="https://notion.so/... hoặc page-id"
+                            >
+                        </div>
+                        
+                        <div class="input-group flex-1">
+                            <label for="newPageDeckName">Tên Sub-Deck</label>
+                            <input 
+                                type="text" 
+                                id="newPageDeckName" 
+                                placeholder="VD: Japanese::Vocabulary"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" id="newPageRecursive" checked>
+                            <span>Export đệ quy (bao gồm subpages)</span>
+                        </label>
+                    </div>
+
+                    <button class="btn btn-secondary" onclick="addPage()">
+                        <i class="fas fa-plus"></i> Thêm Page
+                    </button>
+                </div>
+
+                <!-- Pages List -->
+                <div class="pages-list" id="pagesList">
+                    <h3><i class="fas fa-list"></i> Danh sách Pages (<span id="pagesCount">0</span>)</h3>
+                    <div id="pagesContainer">
+                        <div class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>Chưa có page nào. Thêm page đầu tiên của bạn!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-cog"></i> 3. Cài đặt Export</h2>
 
                 <div class="checkbox-group">
                     <label>
@@ -94,13 +126,23 @@
                         <span>Tự động nhận diện Note Type (Basic/Cloze)</span>
                     </label>
                 </div>
+
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" id="includeMediaExport" checked>
+                        <span>Bao gồm media (ảnh, video)</span>
+                    </label>
+                </div>
             </div>
 
             <div class="card">
-                <h2><i class="fas fa-rocket"></i> 3. Export & Convert</h2>
+                <h2><i class="fas fa-rocket"></i> 4. Export & Convert</h2>
                 <div class="buttons">
-                    <button class="btn btn-primary" onclick="exportFromNotion()">
-                        <i class="fas fa-magic"></i> Export từ Notion & Tạo APKG
+                    <button class="btn btn-primary" onclick="exportAllPages()" id="exportAllBtn" disabled>
+                        <i class="fas fa-magic"></i> Export Tất Cả Pages & Tạo APKG
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearAllPages()">
+                        <i class="fas fa-trash"></i> Xóa Tất Cả
                     </button>
                 </div>
             </div>
@@ -194,6 +236,10 @@
                     <div class="stat-value" id="mediaCount">0</div>
                     <div class="stat-label">Media Files</div>
                 </div>
+            </div>
+
+            <div id="deckStatsContainer" style="margin-top: 20px;">
+                <!-- Deck-specific stats will be inserted here -->
             </div>
         </div>
 
