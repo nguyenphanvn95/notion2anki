@@ -20,31 +20,114 @@ async function ensureSqlReady() {
     return SQL_INSTANCE;
 }
 
-// Parse HTML to notes
+// Parse HTML to notes with better toggle detection
 function parseHtmlToNotes(html) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     
     const notes = [];
     
-    // Find all toggle blocks (Notion toggles)
-    const toggles = doc.querySelectorAll('details');
+    console.log('=== Starting HTML Parsing ===');
+    console.log('HTML length:', html.length);
     
+    // Method 1: Find <details> tags (standard toggle)
+    let toggles = doc.querySelectorAll('details');
+    console.log('Method 1 - Found <details> tags:', toggles.length);
+    
+    // Method 2: Find toggle-like structures with data attributes
+    if (toggles.length === 0) {
+        toggles = doc.querySelectorAll('[class*="toggle"], [data-block-id*="toggle"]');
+        console.log('Method 2 - Found toggle-like elements:', toggles.length);
+    }
+    
+    // Method 3: Find div structures that look like toggles
+    if (toggles.length === 0) {
+        // Look for common Notion toggle patterns
+        const possibleToggles = doc.querySelectorAll('.notion-toggle-block, .notion-selectable.notion-toggle-block, div[data-block-id]');
+        console.log('Method 3 - Found possible toggle elements:', possibleToggles.length);
+        
+        // Filter to only those that have toggle-like structure
+        const filteredToggles = [];
+        possibleToggles.forEach(el => {
+            const hasHeader = el.querySelector('.notion-toggle__summary, summary, [role="button"]');
+            const hasContent = el.querySelector('.notion-toggle__content, .notion-toggle__children');
+            if (hasHeader || hasContent || el.children.length >= 2) {
+                filteredToggles.push(el);
+            }
+        });
+        toggles = filteredToggles;
+        console.log('Method 3 - Filtered toggle elements:', toggles.length);
+    }
+    
+    // Method 4: Look for any nested structure (fallback)
+    if (toggles.length === 0) {
+        console.log('Method 4 - Looking for generic nested structures...');
+        const allDivs = doc.querySelectorAll('div');
+        const nestedStructures = [];
+        
+        allDivs.forEach(div => {
+            // Check if it has a header-like first child and content children
+            if (div.children.length >= 2) {
+                const firstChild = div.children[0];
+                const hasHeaderText = firstChild.textContent.trim().length > 0;
+                const hasOtherContent = div.children.length > 1;
+                
+                if (hasHeaderText && hasOtherContent) {
+                    nestedStructures.push(div);
+                }
+            }
+        });
+        
+        console.log('Method 4 - Found nested structures:', nestedStructures.length);
+        toggles = nestedStructures.slice(0, 200); // Limit to avoid noise
+    }
+    
+    console.log('Total toggles to process:', toggles.length);
+    
+    // Process each toggle
     toggles.forEach((toggle, index) => {
         try {
-            const summary = toggle.querySelector('summary');
-            if (!summary) return;
-            
-            const front = summary.textContent.trim();
-            if (!front) return;
-            
-            // Get back content
+            let front = '';
             let back = '';
-            const contentElements = Array.from(toggle.children).filter(el => el.tagName !== 'SUMMARY');
             
-            contentElements.forEach(el => {
-                back += el.outerHTML || el.textContent;
-            });
+            // Extract front (question/summary)
+            const summary = toggle.querySelector('summary, .notion-toggle__summary, [role="button"]');
+            if (summary) {
+                front = summary.textContent.trim();
+            } else {
+                // Fallback: use first child
+                if (toggle.children.length > 0) {
+                    front = toggle.children[0].textContent.trim();
+                }
+            }
+            
+            if (!front) {
+                console.log(`Skip toggle ${index}: no front content`);
+                return;
+            }
+            
+            // Extract back (answer/content)
+            const contentContainer = toggle.querySelector('.notion-toggle__content, .notion-toggle__children');
+            if (contentContainer) {
+                back = contentContainer.innerHTML.trim();
+            } else {
+                // Fallback: use all children except the first (which is the header)
+                const contentElements = Array.from(toggle.children).filter((el, idx) => idx > 0);
+                contentElements.forEach(el => {
+                    back += el.outerHTML || el.textContent;
+                });
+            }
+            
+            // If still no back content, try to get text content
+            if (!back && toggle.tagName === 'DETAILS') {
+                const contentElements = Array.from(toggle.children).filter(el => el.tagName !== 'SUMMARY');
+                contentElements.forEach(el => {
+                    back += el.outerHTML || el.textContent;
+                });
+            }
+            
+            // Clean up back content
+            back = back.trim();
             
             // Auto-detect cloze
             const isCloze = detectCloze(front + ' ' + back);
@@ -52,17 +135,31 @@ function parseHtmlToNotes(html) {
             // Extract media
             const media = extractMediaFromElement(toggle);
             
-            notes.push({
+            const note = {
                 front: front,
-                back: back.trim(),
+                back: back,
                 isCloze: isCloze,
                 media: media,
                 tags: []
-            });
+            };
+            
+            notes.push(note);
+            
+            if (index < 5) {
+                console.log(`Note ${index}:`, {
+                    front: front.substring(0, 50),
+                    back: back.substring(0, 50),
+                    isCloze
+                });
+            }
+            
         } catch (err) {
-            console.error('Error parsing toggle:', err);
+            console.error(`Error parsing toggle ${index}:`, err);
         }
     });
+    
+    console.log('=== Parsing Complete ===');
+    console.log('Total notes created:', notes.length);
     
     return notes;
 }
@@ -169,12 +266,22 @@ async function buildApkg(notes, mediaFiles, deckName) {
     const basicNotes = notes.filter(n => !n.isCloze);
     const clozeNotes = notes.filter(n => n.isCloze);
     
-    const deckId = nowMs;
-    const decks = {
-        [deckId]: {
+    // Handle deck hierarchy (Main::Sub)
+    const deckParts = deckName.split('::');
+    const decks = {};
+    
+    // Create parent decks
+    let currentDeckName = '';
+    let parentDeckId = null;
+    
+    deckParts.forEach((part, index) => {
+        currentDeckName = currentDeckName ? `${currentDeckName}::${part}` : part;
+        const deckId = nowMs + index;
+        
+        decks[deckId] = {
             id: deckId,
             mod: nowSec,
-            name: deckName,
+            name: currentDeckName,
             usn: -1,
             lrnToday: [0, 0],
             revToday: [0, 0],
@@ -187,8 +294,12 @@ async function buildApkg(notes, mediaFiles, deckName) {
             conf: 1,
             extendNew: 0,
             extendRev: 0
-        }
-    };
+        };
+        
+        parentDeckId = deckId;
+    });
+    
+    const targetDeckId = parentDeckId || nowMs;
     
     const models = {};
     
@@ -201,7 +312,7 @@ async function buildApkg(notes, mediaFiles, deckName) {
             mod: nowSec,
             usn: -1,
             sortf: 0,
-            did: deckId,
+            did: targetDeckId,
             tmpls: [{
                 name: "Card 1",
                 ord: 0,
@@ -238,7 +349,7 @@ async function buildApkg(notes, mediaFiles, deckName) {
             mod: nowSec,
             usn: -1,
             sortf: 0,
-            did: deckId,
+            did: targetDeckId,
             tmpls: [{
                 name: "Cloze",
                 ord: 0,
@@ -282,11 +393,11 @@ async function buildApkg(notes, mediaFiles, deckName) {
         estTimes: true,
         nextPos: 1,
         sortType: "noteFld",
-        activeDecks: [deckId],
+        activeDecks: [targetDeckId],
         newSpread: 0,
         timeLim: 0,
-        curDeck: deckId,
-        curModel: Object.keys(models)[0] ? parseInt(Object.keys(models)[0]) : deckId,
+        curDeck: targetDeckId,
+        curModel: Object.keys(models)[0] ? parseInt(Object.keys(models)[0]) : targetDeckId,
         dayLearnFirst: false,
         creationOffset: -420
     };
@@ -337,7 +448,7 @@ async function buildApkg(notes, mediaFiles, deckName) {
         ]);
         
         db.run(`INSERT INTO cards VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [
-            cardId, noteId, deckId, 0, nowSec, -1,
+            cardId, noteId, targetDeckId, 0, nowSec, -1,
             0, 0, noteIndex + 1,
             0, 0, 0, 0, 0, 0, 0, 0, "{}"
         ]);
@@ -373,7 +484,7 @@ async function buildApkg(notes, mediaFiles, deckName) {
             const cardId = nowMs + 500000 + noteIndex * 10 + ord;
             
             db.run(`INSERT INTO cards VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [
-                cardId, noteId, deckId, ord, nowSec, -1,
+                cardId, noteId, targetDeckId, ord, nowSec, -1,
                 0, 0, noteIndex + 1,
                 0, 0, 0, 0, 0, 0, 0, 0, "{}"
             ]);
