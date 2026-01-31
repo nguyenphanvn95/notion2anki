@@ -424,6 +424,7 @@ async function exportAllPages() {
         let allNotes = [];
         let allMedia = {};
         const deckStats = [];
+        const failedPages = [];
         
         // Export each page
         for (let i = 0; i < pages.length; i++) {
@@ -463,14 +464,26 @@ async function exportAllPages() {
                 
             } catch (error) {
                 console.error(`Error exporting page ${page.deckName}:`, error);
-                showStatus(`⚠️ Lỗi khi export page "${page.deckName}": ${error.message}`, 'warning');
+                failedPages.push({ name: page.deckName, error: error?.message || String(error) });
+                showStatus(`⚠️ Lỗi khi export page "${page.deckName}": ${error?.message || error}`, 'warning');
                 // Continue with other pages
             }
         }
         
         if (allNotes.length === 0) {
             hideProgress();
-            showStatus('Không tìm thấy toggle blocks nào. Vui lòng sử dụng toggle blocks trong Notion pages.', 'error');
+            // If we failed to export any page, show a clearer error instead of 'no toggles'
+            if (failedPages && failedPages.length > 0) {
+                const first = failedPages[0];
+                const hint = (first && first.error && String(first.error).includes('User cannot access block'))
+                  ? "
+
+Gợi ý: Page này không thuộc quyền truy cập của token_v2 hiện tại. Hãy mở page trên Notion bằng đúng tài khoản, hoặc Duplicate page sang workspace của bạn, hoặc Share page với tài khoản đó (Full access)."
+                  : "";
+                showStatus(`Không export được page nào. Lỗi mẫu: ${first.name || ''} - ${first.error || 'Unknown error'}${hint}`, 'error');
+                return;
+            }
+            showStatus('Không tìm thấy toggle blocks nào. Nếu page không dùng toggle, hãy bật chế độ parse theo heading/block (sắp thêm).', 'error');
             return;
         }
         

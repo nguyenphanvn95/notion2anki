@@ -12,12 +12,23 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing token or pageId" });
     }
 
+    const toDashedId = (id) => {
+      if (!id) return id;
+      const raw = String(id).trim().replace(/-/g, '');
+      if (/^[a-f0-9]{32}$/i.test(raw)) {
+        return raw.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/i, '$1-$2-$3-$4-$5');
+      }
+      return String(id).trim();
+    };
+
+    const blockId = toDashedId(pageId);
+
     // ✅ Payload theo đúng addon notion2ankipro
     const payload = {
       task: {
         eventName: "exportBlock",
         request: {
-          block: { id: pageId },
+          block: { id: blockId },
           recursive: !!recursive,
           exportOptions: {
             exportType: "html",
