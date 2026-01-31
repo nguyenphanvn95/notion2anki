@@ -1,70 +1,63 @@
-// Vercel Serverless Function
-// Proxies Notion internal API to bypass browser CORS.
-//
-// Security note:
-// - token_v2 is sensitive. This function expects the client to send it in the body.
-// - Do NOT log the token.
-// - This is an *unofficial* API; use at your own risk.
+// /api/notion/enqueueTask.js
 
-const NOTION_ENQUEUE_TASK_ENDPOINT = 'https://www.notion.so/api/v3/enqueueTask';
-
-module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.statusCode = 405;
-    return res.end('Method Not Allowed');
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const { token, payload } = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    const { token, pageId } = req.body;
 
-    if (!token || typeof token !== 'string') {
-      res.statusCode = 400;
-      return res.json({ error: 'Missing token (token_v2).' });
-    }
-    if (!payload || typeof payload !== 'object') {
-      res.statusCode = 400;
-      return res.json({ error: 'Missing payload.' });
+    if (!token || !pageId) {
+      return res.status(400).json({
+        error: "Missing token or pageId"
+      });
     }
 
-    const upstream = await fetch(NOTION_ENQUEUE_TASK_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'notion2anki-vercel-proxy/1.0',
-        // Notion auth cookie
-        'Cookie': `token_v2=${token}`,
-        // Some deployments benefit from these, harmless if ignored
-        'Origin': 'https://www.notion.so',
-        'Referer': 'https://www.notion.so',
-      },
-      body: JSON.stringify(payload),
+    // Payload chuẩn cho Notion internal API
+    const payload = {
+      task: {
+        eventName: "exportPage",
+        request: {
+          pageId: pageId,
+          exportOptions: {
+            exportType: "html",           // html là ổn nhất để parse
+            timeZone: "Asia/Ho_Chi_Minh",
+            locale: "en"
+          }
+        }
+      }
+    };
+
+    const notionRes = await fetch(
+      "https://www.notion.so/api/v3/enqueueTask",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": `token_v2=${token}`
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const data = await notionRes.json();
+
+    // Debug nhẹ nếu cần
+    if (!data || !data.taskId) {
+      return res.status(500).json({
+        error: "Notion did not return taskId",
+        raw: data
+      });
+    }
+
+    return res.status(200).json(data);
+
+  } catch (err) {
+    console.error("enqueueTask error:", err);
+    return res.status(500).json({
+      error: "Internal server error",
+      detail: err.message
     });
-
-    if (upstream.status === 401) {
-      res.statusCode = 401;
-      return res.json({ error: 'Invalid token_v2.' });
-    }
-
-    const text = await upstream.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      // Notion sometimes returns HTML on edge failures
-      res.statusCode = 502;
-      return res.json({ error: 'Upstream non-JSON response', raw: text.slice(0, 500) });
-    }
-
-    if (!upstream.ok) {
-      res.statusCode = upstream.status;
-      return res.json({ error: 'Upstream error', details: data });
-    }
-
-    // Successful response contains taskId
-    res.statusCode = 200;
-    return res.json({ taskId: data.taskId });
-  } catch (e) {
-    res.statusCode = 500;
-    return res.json({ error: 'Proxy failed', message: e?.message || String(e) });
   }
-};
+}
