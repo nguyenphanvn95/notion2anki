@@ -146,26 +146,24 @@ async function getTaskResult(token, taskId) {
 // Download and extract ZIP from URL
 // NOTE: fetching exportURL directly may fail due to CORS in some browsers.
 // We prefer downloading via our backend proxy.
-async function downloadAndExtractZip(url) {
+async function downloadAndExtractZip(url, token) {
     updateProgress(85, 'Downloading exported file...');
 
-    let blob;
-    try {
-        const proxied = await fetch(NOTION_DOWNLOAD_EXPORT_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ exportURL: url }),
-        });
-        if (!proxied.ok) {
-            // Fallback to direct download if proxy fails.
-            throw new Error('proxy download failed');
-        }
-        blob = await proxied.blob();
-    } catch {
-        // Fallback: direct fetch (may work if exportURL has permissive CORS)
-        const response = await fetch(url);
-        blob = await response.blob();
+    // Always download via backend proxy to avoid CORS.
+    // Some Notion export URLs require a valid session cookie; we pass token to backend.
+    const proxied = await fetch(NOTION_DOWNLOAD_EXPORT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exportURL: url, token }),
+    });
+
+    if (!proxied.ok) {
+        let errText = '';
+        try { errText = await proxied.text(); } catch {}
+        throw new Error(`Failed to download export via proxy (${proxied.status}). ${errText}`);
     }
+
+    const blob = await proxied.blob();
     
     updateProgress(90, 'Extracting ZIP...');
     
@@ -234,7 +232,7 @@ async function exportPageFromNotion(token, pageUrl, recursive) {
         throw new Error('No export URL returned');
     }
     
-    const { html, media } = await downloadAndExtractZip(exportUrl);
+    const { html, media } = await downloadAndExtractZip(exportUrl, token);
     
     return { html, media };
 }

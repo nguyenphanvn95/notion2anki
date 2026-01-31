@@ -8,12 +8,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { exportURL, filename = "notion_export.zip" } = req.body || {};
+    const { exportURL, filename = "notion_export.zip", token } = req.body || {};
     if (!exportURL) {
       return res.status(400).json({ error: "Missing exportURL" });
     }
 
-    const r = await fetch(exportURL);
+    const headers = {
+      "User-Agent": "Mozilla/5.0",
+      "Referer": "https://www.notion.so/",
+      "Origin": "https://www.notion.so",
+    };
+
+    // Some export links may still require an authenticated session.
+    if (token) {
+      headers["Cookie"] = `token_v2=${token}`;
+    }
+
+    const r = await fetch(exportURL, { headers, redirect: "follow" });
     if (!r.ok) {
       const t = await r.text().catch(() => "");
       return res.status(502).json({
