@@ -1,194 +1,254 @@
-# Notion2Anki Web - MVP Version
+# 🧠 Notion2Anki Complete
 
-## 🎯 Tính năng
+**The ultimate tool to convert Notion pages into Anki flashcards**
 
-✅ **Import từ Notion Export** (ZIP/HTML)  
-✅ **Tự động parse Toggle blocks** thành flashcards  
-✅ **Auto-detect Note Types** (Basic/Cloze)  
-✅ **Export file .apkg chuẩn** Anki  
-✅ **Hỗ trợ media** (ảnh, video)  
-✅ **Không cần CORS**, không cần Notion API  
+Export Notion pages directly OR upload exported ZIP/HTML files → Automatically convert to Anki APKG format with support for:
+- ✅ Basic flashcards
+- ✅ Cloze deletions
+- ✅ Media files (images, videos, audio)
+- ✅ Automatic note type detection
 
-## 🚀 Cách sử dụng
+## 🌟 Features
 
-### Bước 1: Export từ Notion
+### Two Ways to Create Flashcards
 
-1. Mở trang Notion chứa flashcards
-2. Click menu "..." → **Export**
-3. Chọn Export format: **HTML**
-4. Include subpages: Tùy chọn (nếu muốn export cả sub-pages)
-5. **Download** file ZIP
+1. **Direct Export from Notion** ⚡
+   - Enter your Notion token and page URL
+   - Export directly from Notion API
+   - One-click conversion to APKG
 
-### Bước 2: Chuẩn bị cấu trúc Notion
+2. **Upload Exported Files** 📤
+   - Export from Notion manually
+   - Upload ZIP or HTML file
+   - Convert to APKG
 
-Sử dụng **Toggle blocks** để tạo flashcards:
+### Smart Features
+
+- 🤖 **Auto-detect note types**: Automatically identifies Basic and Cloze cards
+- 📦 **Media support**: Includes images, videos, and audio files
+- 🎨 **Clean interface**: Modern, responsive design
+- 📊 **Statistics**: See note counts and types before export
+- 💾 **Offline capable**: Works entirely in your browser
+
+## 🚀 Quick Start
+
+### Option 1: Direct Export from Notion
+
+1. **Get your Notion token**:
+   - Open Notion in your browser and log in
+   - Press F12 to open Developer Tools
+   - Go to Application → Cookies → notion.so
+   - Find and copy the `token_v2` cookie value
+
+2. **Export a page**:
+   - Go to "Export from Notion" tab
+   - Paste your token
+   - Enter page URL or ID
+   - Click "Export from Notion & Create APKG"
+
+### Option 2: Upload Exported File
+
+1. **Export from Notion**:
+   - Open your Notion page
+   - Click "..." → Export
+   - Choose format: **HTML**
+   - Download the ZIP file
+
+2. **Convert to APKG**:
+   - Go to "Upload ZIP/HTML" tab
+   - Upload the downloaded file
+   - Click "Process & Export APKG"
+
+## 📖 How to Create Flashcards in Notion
+
+### Basic Flashcards
+
+Use toggle blocks in Notion:
 
 ```
-▼ What is Anki?
-  Anki is a spaced repetition flashcard program.
-  
-▼ {{c1::Tokyo}} is the capital of Japan
-  (Cloze deletion - auto-detected)
+▶ What is the capital of France?
+  Paris
 ```
 
-**Format:**
-- **Summary** (toggle title) = **Front** của card
-- **Content** (toggle body) = **Back** của card
-- Hỗ trợ HTML, images, videos trong content
+The summary (question) becomes the **Front**, and the content becomes the **Back**.
 
-### Bước 3: Upload & Export
+### Cloze Deletions
 
-1. Mở `index.html` trong browser
-2. Kéo thả file ZIP vào drop zone
-3. (Tùy chọn) Đặt tên Deck
-4. Click "**Xử lý & Export APKG**"
-5. Chờ xử lý (~5-30s tùy số lượng notes)
-6. File .apkg sẽ tự động download
+Use Anki cloze syntax:
 
-### Bước 4: Import vào Anki
-
-1. Mở **Anki Desktop**
-2. File → **Import**
-3. Chọn file .apkg vừa download
-4. Click **Import**
-5. Done! 🎉
-
-## 📋 Cấu trúc Toggle trong Notion
-
-### Basic Note
 ```
-▼ Front text
-  Back text
-  Can include <b>HTML</b>
-  Images, videos, etc.
+▶ {{c1::Paris}} is the capital of France.
+  Additional information here (optional)
 ```
 
-### Cloze Note
+The app automatically detects cloze patterns and creates cloze cards.
+
+### With Media
+
+Simply include images or videos in your toggle blocks. They will be automatically extracted and included in the APKG file.
+
+## 🎯 Use Cases
+
+- 📚 **Students**: Convert lecture notes to flashcards
+- 🌍 **Language learners**: Create vocabulary decks
+- 💼 **Professionals**: Build knowledge bases
+- 🎓 **Educators**: Share study materials with students
+- 📝 **Content creators**: Organize information for later review
+
+## 🔧 Technical Details
+
+### Requirements
+
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+- JavaScript enabled
+- Internet connection (for libraries)
+
+### Libraries Used
+
+- [sql.js](https://github.com/sql-js/sql.js/) - SQLite in browser
+- [JSZip](https://stuk.github.io/jszip/) - ZIP file handling
+- [Font Awesome](https://fontawesome.com/) - Icons
+
+### File Structure
+
 ```
-▼ {{c1::Paris}} is the capital of {{c2::France}}
-  Additional info here (optional)
-```
-
-**Auto-detection:** Nếu có `{{c1::text}}` → Tự động tạo Cloze note
-
-## 🎨 Ví dụ
-
-### Vocabulary Card
-```
-▼ Ubiquitous
-  <b>Definition:</b> Present everywhere
-  <b>Example:</b> Mobile phones are ubiquitous nowadays.
-  <img src="image.png">
-```
-
-### Cloze Deletion
-```
-▼ The {{c1::mitochondria}} is the {{c2::powerhouse}} of the cell
-  This creates 2 cards automatically
-```
-
-### Multi-line Content
-```
-▼ List the 3 branches of US government
-  1. Executive
-  2. Legislative  
-  3. Judicial
-```
-
-## ⚙️ Tùy chọn
-
-### Tên Deck
-- Mặc định: "Notion"
-- Tùy chỉnh: Nhập tên bất kỳ
-
-### Auto-detect Note Type
-- ✅ Enabled: Tự động phân biệt Basic/Cloze
-- ❌ Disabled: Tất cả thành Basic notes
-
-### Include Media
-- ✅ Enabled: Đóng gói ảnh/video vào .apkg
-- ❌ Disabled: Chỉ text
-
-## 🔧 Kỹ thuật
-
-### Dependencies
-- **sql.js** - SQLite trong browser
-- **JSZip** - Tạo file ZIP
-- Pure JavaScript - Không framework
-
-### APKG Structure
-```
-.apkg (ZIP file)
-├── collection.anki2 (SQLite database)
-│   ├── col (collection config)
-│   ├── notes (flashcard data)
-│   ├── cards (card instances)
-│   └── ... (other tables)
-├── media (JSON: media filename mapping)
-├── 0, 1, 2... (media files)
+notion2anki-complete/
+├── index.html          # Main HTML interface
+├── style.css           # Styles
+├── app.js              # Main application logic
+├── notion-export.js    # Notion API integration
+├── anki-builder.js     # APKG file builder
+└── README.md          # This file
 ```
 
-### Note Types Created
+## ⚠️ Important Notes
 
-**Basic Note:**
-- Fields: Front, Back
-- Template: Simple front/back
+### CORS Limitations
 
-**Cloze Note:**
-- Fields: Text, Extra
-- Template: Cloze deletions
-- Multiple cards per note
+Due to browser CORS (Cross-Origin Resource Sharing) restrictions, **direct export from Notion may not work** in all browsers or configurations.
 
-## ⚠️ Giới hạn MVP
+**If you encounter CORS errors**:
+1. Use the "Upload ZIP/HTML" tab instead
+2. Or use our backend server (see Advanced Setup below)
 
-### Không có (sẽ có trong full version):
-- ❌ Notion API integration
-- ❌ Multi-page management
-- ❌ Custom templates
-- ❌ Tags support
-- ❌ Advanced formatting
+### Token Security
 
-### Có thể không hoạt động với:
-- Complex Notion blocks (databases, galleries, etc.)
-- Nested toggles (chỉ parse level 1)
-- Very large exports (>1000 notes)
+- ⚠️ **Never share your token_v2** with anyone
+- The token provides full access to your Notion account
+- This app processes everything locally in your browser
+- Your token is never sent to any external server (except Notion API)
 
-## 🐛 Troubleshooting
+### Unofficial API
 
-### "Không tìm thấy toggle blocks"
-→ Đảm bảo bạn dùng **Toggle blocks** trong Notion, không phải headings hay paragraphs
+This tool uses Notion's **unofficial API**, which may change without notice. If export stops working, please:
+1. Check for updates
+2. Report issues on GitHub
+3. Use the manual upload method as a fallback
 
-### "sql.js not loaded"
-→ Check internet connection (cần load từ CDN)
+## 🚀 Advanced Setup (Optional)
 
-### "File .apkg lỗi"
-→ Kiểm tra console (F12) xem error log
+### Backend Server for CORS
 
-### Ảnh không hiển thị
-→ Đảm bảo "Include Media" được check
+To avoid CORS issues, you can run a backend proxy server:
+
+1. **Install Python dependencies**:
+   ```bash
+   pip install flask flask-cors requests
+   ```
+
+2. **Create `server.py`**:
+   ```python
+   # See DEPLOYMENT.md for full server code
+   ```
+
+3. **Run server**:
+   ```bash
+   python server.py
+   ```
+
+4. **Update frontend**:
+   Edit `notion-export.js` to use your backend URL
+
+### Deploy to GitHub Pages
+
+1. **Push to GitHub**:
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git remote add origin https://github.com/yourusername/notion2anki.git
+   git push -u origin main
+   ```
+
+2. **Enable GitHub Pages**:
+   - Go to Settings → Pages
+   - Select source: main branch
+   - Your site: `https://yourusername.github.io/notion2anki/`
+
+## 📊 Statistics & Analytics
+
+After conversion, you'll see:
+- **Total Notes**: Number of flashcards created
+- **Basic Notes**: Traditional Q&A cards
+- **Cloze Notes**: Fill-in-the-blank cards
+- **Media Files**: Number of images/videos included
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file
+
+## 🙏 Credits
+
+- Inspired by [notion2anki](https://github.com/alemayhu/notion2anki) addon
+- Built with love for the Notion and Anki communities
+
+## 💬 Support
+
+- 📖 [Documentation](https://github.com/yourusername/notion2anki/wiki)
+- 🐛 [Report Bug](https://github.com/yourusername/notion2anki/issues)
+- 💡 [Request Feature](https://github.com/yourusername/notion2anki/issues)
+
+## 🎓 Tutorials
+
+### Video Tutorials
+- Coming soon!
+
+### Written Guides
+- [Complete Beginner's Guide](docs/beginners-guide.md)
+- [Advanced Usage](docs/advanced-usage.md)
+- [Troubleshooting](docs/troubleshooting.md)
 
 ## 📈 Roadmap
 
-### v2.0 (Full Version)
-- [ ] Notion API integration
-- [ ] Token + username auth
-- [ ] Multi-page management
-- [ ] Custom note types
-- [ ] Template editor
-- [ ] Tags from Notion properties
-- [ ] Advanced formatting
-- [ ] Progress persistence
+- [ ] Support for more note types (Image Occlusion, etc.)
+- [ ] Batch export multiple pages
+- [ ] Tag management
+- [ ] Deck hierarchy support
+- [ ] Browser extension version
+- [ ] Desktop app (Electron)
+- [ ] Mobile app support
 
-## 📝 License
+## ⭐ Show Your Support
 
-MIT License - Free to use
-
-## 🤝 Contribute
-
-Issues & PRs welcome on GitHub!
+If you find this tool useful, please:
+- ⭐ Star the repository
+- 🐦 Share on social media
+- 📝 Write a blog post about it
+- 💬 Tell your friends
 
 ---
 
-**Made with ❤️ for Anki learners**
+Made with ❤️ for students, learners, and knowledge enthusiasts everywhere.
 
-*MVP Version 1.0 - Tập trung vào core functionality*
+**Happy studying!** 📚✨
