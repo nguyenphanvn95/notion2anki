@@ -1,194 +1,252 @@
-# Notion2Anki Web - MVP Version
+# Notion2Anki Complete - Multi-Page Edition
 
-## 🎯 Tính năng
+🚀 **Phiên bản nâng cấp** với khả năng export nhiều trang Notion cùng lúc vào một file APKG duy nhất!
 
-✅ **Import từ Notion Export** (ZIP/HTML)  
-✅ **Tự động parse Toggle blocks** thành flashcards  
-✅ **Auto-detect Note Types** (Basic/Cloze)  
-✅ **Export file .apkg chuẩn** Anki  
-✅ **Hỗ trợ media** (ảnh, video)  
-✅ **Không cần CORS**, không cần Notion API  
+## ✨ Tính năng mới
+
+### 📚 Export Nhiều Pages Cùng Lúc
+- **Quản lý danh sách pages**: Thêm, sửa, xóa nhiều pages dễ dàng
+- **Tên deck riêng biệt**: Mỗi page có thể có tên sub-deck riêng
+- **Deck phân cấp**: Tất cả sub-decks được tổ chức dưới một deck chính
+- **Lưu trữ cấu hình**: Danh sách pages tự động lưu vào localStorage
+
+### 🎯 Tính năng chính
+
+1. **Export từ Notion**
+   - Export trực tiếp từ Notion sử dụng token_v2
+   - Hỗ trợ export đệ quy (bao gồm subpages)
+   - Export nhiều pages cùng lúc
+   - Mỗi page có tên deck riêng
+
+2. **Upload ZIP/HTML**
+   - Upload file đã export từ Notion
+   - Tự động phát hiện và extract media
+   - Convert sang APKG ngay lập tức
+
+3. **Tự động phát hiện Note Type**
+   - Basic notes (câu hỏi/trả lời)
+   - Cloze notes (fill-in-the-blank)
+
+4. **Hỗ trợ Media**
+   - Ảnh (PNG, JPG, GIF, WebP)
+   - Video (MP4)
+   - Audio (MP3, WAV)
 
 ## 🚀 Cách sử dụng
 
-### Bước 1: Export từ Notion
+### Phương pháp 1: Export từ Notion (Multi-Page)
 
-1. Mở trang Notion chứa flashcards
-2. Click menu "..." → **Export**
-3. Chọn Export format: **HTML**
-4. Include subpages: Tùy chọn (nếu muốn export cả sub-pages)
-5. **Download** file ZIP
+1. **Lấy Notion Token**
+   - Đăng nhập vào Notion
+   - Mở Developer Tools (F12)
+   - Application → Cookies → notion.so
+   - Copy giá trị của cookie `token_v2`
 
-### Bước 2: Chuẩn bị cấu trúc Notion
+2. **Nhập Token**
+   - Paste token vào field "Notion Token (token_v2)"
 
-Sử dụng **Toggle blocks** để tạo flashcards:
+3. **Thêm Pages**
+   - Nhập Page URL hoặc Page ID
+   - Nhập tên sub-deck (VD: "Japanese::Vocabulary", "Math::Calculus")
+   - Chọn export đệ quy nếu cần
+   - Click "Thêm Page"
+   - Lặp lại để thêm nhiều pages
+
+4. **Quản lý Pages**
+   - **Sửa**: Click nút "Sửa" để chỉnh sửa tên deck hoặc cài đặt
+   - **Xóa**: Click nút "Xóa" để xóa page khỏi danh sách
+   - **Xóa tất cả**: Click "Xóa Tất Cả" để reset danh sách
+
+5. **Export**
+   - Nhập tên Deck Chính (deck sẽ chứa tất cả sub-decks)
+   - Click "Export Tất Cả Pages & Tạo APKG"
+   - Đợi quá trình export hoàn thành
+   - Download file APKG
+
+### Phương pháp 2: Upload ZIP/HTML
+
+1. **Export từ Notion**
+   - Mở page trong Notion
+   - Click "..." → Export
+   - Chọn Export format: **HTML**
+   - Include subpages: Tùy chọn
+   - Download file ZIP
+
+2. **Upload và Convert**
+   - Kéo thả file ZIP vào drop zone hoặc click để chọn
+   - Nhập tên deck
+   - Click "Xử lý & Export APKG"
+   - Download file APKG
+
+## 📋 Cấu trúc Deck
+
+Khi export nhiều pages, cấu trúc deck sẽ như sau:
 
 ```
-▼ What is Anki?
-  Anki is a spaced repetition flashcard program.
-  
-▼ {{c1::Tokyo}} is the capital of Japan
-  (Cloze deletion - auto-detected)
+Main Deck Name
+├── Page 1 Deck Name
+│   ├── Note 1
+│   ├── Note 2
+│   └── ...
+├── Page 2 Deck Name
+│   ├── Note 1
+│   └── ...
+└── Page 3 Deck Name
+    └── ...
 ```
 
-**Format:**
-- **Summary** (toggle title) = **Front** của card
-- **Content** (toggle body) = **Back** của card
-- Hỗ trợ HTML, images, videos trong content
+**Ví dụ:**
 
-### Bước 3: Upload & Export
-
-1. Mở `index.html` trong browser
-2. Kéo thả file ZIP vào drop zone
-3. (Tùy chọn) Đặt tên Deck
-4. Click "**Xử lý & Export APKG**"
-5. Chờ xử lý (~5-30s tùy số lượng notes)
-6. File .apkg sẽ tự động download
-
-### Bước 4: Import vào Anki
-
-1. Mở **Anki Desktop**
-2. File → **Import**
-3. Chọn file .apkg vừa download
-4. Click **Import**
-5. Done! 🎉
-
-## 📋 Cấu trúc Toggle trong Notion
-
-### Basic Note
 ```
-▼ Front text
-  Back text
-  Can include <b>HTML</b>
-  Images, videos, etc.
+Notion Collection
+├── Japanese::Vocabulary
+│   ├── 50 notes
+│   └── ...
+├── Japanese::Grammar
+│   ├── 30 notes
+│   └── ...
+└── Math::Calculus
+    ├── 25 notes
+    └── ...
 ```
 
-### Cloze Note
-```
-▼ {{c1::Paris}} is the capital of {{c2::France}}
-  Additional info here (optional)
-```
+## 📝 Định dạng Notion
 
-**Auto-detection:** Nếu có `{{c1::text}}` → Tự động tạo Cloze note
+### Basic Notes (Q&A)
 
-## 🎨 Ví dụ
+Sử dụng **Toggle blocks** trong Notion:
 
-### Vocabulary Card
 ```
-▼ Ubiquitous
-  <b>Definition:</b> Present everywhere
-  <b>Example:</b> Mobile phones are ubiquitous nowadays.
-  <img src="image.png">
+▶ What is the capital of France?
+  Paris
 ```
 
-### Cloze Deletion
+Sẽ tạo flashcard:
+- **Front**: What is the capital of France?
+- **Back**: Paris
+
+### Cloze Notes (Fill-in-the-blank)
+
+Sử dụng `{{c1::text}}` trong Notion:
+
 ```
-▼ The {{c1::mitochondria}} is the {{c2::powerhouse}} of the cell
-  This creates 2 cards automatically
-```
-
-### Multi-line Content
-```
-▼ List the 3 branches of US government
-  1. Executive
-  2. Legislative  
-  3. Judicial
-```
-
-## ⚙️ Tùy chọn
-
-### Tên Deck
-- Mặc định: "Notion"
-- Tùy chỉnh: Nhập tên bất kỳ
-
-### Auto-detect Note Type
-- ✅ Enabled: Tự động phân biệt Basic/Cloze
-- ❌ Disabled: Tất cả thành Basic notes
-
-### Include Media
-- ✅ Enabled: Đóng gói ảnh/video vào .apkg
-- ❌ Disabled: Chỉ text
-
-## 🔧 Kỹ thuật
-
-### Dependencies
-- **sql.js** - SQLite trong browser
-- **JSZip** - Tạo file ZIP
-- Pure JavaScript - Không framework
-
-### APKG Structure
-```
-.apkg (ZIP file)
-├── collection.anki2 (SQLite database)
-│   ├── col (collection config)
-│   ├── notes (flashcard data)
-│   ├── cards (card instances)
-│   └── ... (other tables)
-├── media (JSON: media filename mapping)
-├── 0, 1, 2... (media files)
+▶ The capital of France is {{c1::Paris}}
+  (any content here)
 ```
 
-### Note Types Created
+Sẽ tạo cloze card:
+- **Text**: The capital of France is {{c1::Paris}}
 
-**Basic Note:**
-- Fields: Front, Back
-- Template: Simple front/back
+## 🎨 Tính năng nâng cao
 
-**Cloze Note:**
-- Fields: Text, Extra
-- Template: Cloze deletions
-- Multiple cards per note
+### Lưu trữ tự động
+- Danh sách pages được tự động lưu vào localStorage
+- Không mất dữ liệu khi refresh trang
 
-## ⚠️ Giới hạn MVP
+### Thống kê chi tiết
+- Tổng số notes
+- Số lượng Basic notes vs Cloze notes
+- Số lượng media files
+- Thống kê theo từng deck
 
-### Không có (sẽ có trong full version):
-- ❌ Notion API integration
-- ❌ Multi-page management
-- ❌ Custom templates
-- ❌ Tags support
-- ❌ Advanced formatting
+### Quản lý linh hoạt
+- Thêm pages không giới hạn
+- Sửa thông tin bất kỳ lúc nào
+- Xóa từng page hoặc xóa tất cả
 
-### Có thể không hoạt động với:
-- Complex Notion blocks (databases, galleries, etc.)
-- Nested toggles (chỉ parse level 1)
-- Very large exports (>1000 notes)
+## ⚠️ Lưu ý quan trọng
 
-## 🐛 Troubleshooting
+### CORS Restrictions
+Do hạn chế CORS của trình duyệt, export trực tiếp từ Notion có thể không hoạt động trên một số trình duyệt. Nếu gặp lỗi:
 
-### "Không tìm thấy toggle blocks"
-→ Đảm bảo bạn dùng **Toggle blocks** trong Notion, không phải headings hay paragraphs
+1. Sử dụng phương pháp Upload ZIP/HTML
+2. Hoặc cài đặt backend server (xem phần Development)
 
-### "sql.js not loaded"
-→ Check internet connection (cần load từ CDN)
+### Token Security
+- **KHÔNG BAO GIỜ** chia sẻ token_v2 của bạn
+- Token có quyền truy cập đầy đủ vào Notion workspace
+- Sử dụng trong môi trường an toàn
 
-### "File .apkg lỗi"
-→ Kiểm tra console (F12) xem error log
+### Page ID
+Có thể lấy Page ID từ URL:
+```
+https://notion.so/Page-Name-abc123def456...
+                              ^^^^^^^^^^^^^^^^
+                                  Page ID
+```
 
-### Ảnh không hiển thị
-→ Đảm bảo "Include Media" được check
+## 🛠️ Cài đặt & Development
 
-## 📈 Roadmap
+### Requirements
+- Modern web browser (Chrome, Firefox, Edge)
+- Không cần cài đặt thêm
 
-### v2.0 (Full Version)
-- [ ] Notion API integration
-- [ ] Token + username auth
-- [ ] Multi-page management
-- [ ] Custom note types
-- [ ] Template editor
-- [ ] Tags from Notion properties
-- [ ] Advanced formatting
-- [ ] Progress persistence
+### Local Development
+```bash
+# Clone repository
+git clone https://github.com/yourusername/notion2anki-complete.git
 
-## 📝 License
+# Mở file index.html trong browser
+# Hoặc sử dụng local server:
+python -m http.server 8000
+# Truy cập: http://localhost:8000
+```
 
-MIT License - Free to use
+### File Structure
+```
+notion2anki-complete/
+├── index.html          # Main HTML file
+├── style.css           # Styling
+├── app.js              # Main application logic (Multi-page support)
+├── notion-export.js    # Notion API integration
+├── anki-builder.js     # APKG file builder
+└── README.md           # Documentation
+```
 
-## 🤝 Contribute
+## 🔧 Troubleshooting
 
-Issues & PRs welcome on GitHub!
+### Không tìm thấy toggle blocks
+- Đảm bảo bạn sử dụng **Toggle blocks** trong Notion
+- Toggle blocks có icon ▶ ở đầu
+
+### Lỗi CORS khi export trực tiếp
+- Sử dụng phương pháp Upload ZIP/HTML
+- Hoặc cài đặt CORS browser extension (không khuyến khích)
+
+### Media không hiển thị
+- Đảm bảo checkbox "Bao gồm media" được chọn
+- Check file ZIP có chứa media files
+- Media phải ở định dạng được hỗ trợ
+
+### Page không được thêm vào danh sách
+- Check Page ID có đúng không
+- Check tên deck không để trống
+- Check không trùng với page đã có
+
+## 📄 License
+
+MIT License - See LICENSE file for details
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 💬 Support
+
+- GitHub Issues: [Create an issue](https://github.com/yourusername/notion2anki-complete/issues)
+- Email: your-email@example.com
+
+## 🙏 Credits
+
+- Built with ❤️ for Notion & Anki users
+- Uses [JSZip](https://stuk.github.io/jszip/) for ZIP handling
+- Uses [sql.js](https://github.com/sql-js/sql.js) for SQLite in browser
+
+## 📚 Related Projects
+
+- [Anki](https://apps.ankiweb.net/) - Spaced repetition flashcard app
+- [Notion](https://notion.so/) - All-in-one workspace
 
 ---
 
-**Made with ❤️ for Anki learners**
-
-*MVP Version 1.0 - Tập trung vào core functionality*
+**Disclaimer**: This tool uses Notion's unofficial API. Use at your own risk. Not affiliated with Notion or Anki.

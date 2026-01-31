@@ -1,10 +1,35 @@
-// ===== GLOBAL STATE =====
-let SQL_INSTANCE = null;
+/**
+ * Main Application Logic - Multi-Page Support
+ * Handles UI interactions and coordinates between modules
+ */
+
+// Global state
 let uploadedFile = null;
-let parsedNotes = [];
-let mediaFiles = {};
+let currentMediaFiles = {};
+let pages = []; // Array of page objects: { id, pageId, deckName, recursive }
+let nextPageId = 1;
+
+// ===== LOCAL STORAGE =====
+
+function savePages() {
+    localStorage.setItem('notion2anki_pages', JSON.stringify(pages));
+}
+
+function loadPages() {
+    const saved = localStorage.getItem('notion2anki_pages');
+    if (saved) {
+        try {
+            pages = JSON.parse(saved);
+            nextPageId = Math.max(...pages.map(p => p.id), 0) + 1;
+            renderPages();
+        } catch (e) {
+            console.error('Error loading saved pages:', e);
+        }
+    }
+}
 
 // ===== UTILITY FUNCTIONS =====
+
 function showStatus(message, type = 'info') {
     const statusEl = document.getElementById('statusMessage');
     statusEl.textContent = message;
@@ -12,7 +37,7 @@ function showStatus(message, type = 'info') {
     
     setTimeout(() => {
         statusEl.classList.remove('show');
-    }, 4000);
+    }, 5000);
 }
 
 function updateProgress(percent, text) {
@@ -22,7 +47,7 @@ function updateProgress(percent, text) {
     
     progressCard.classList.add('show');
     progressFill.style.width = percent + '%';
-    progressFill.textContent = percent + '%';
+    progressFill.textContent = Math.round(percent) + '%';
     progressText.textContent = text;
 }
 
@@ -30,16 +55,295 @@ function hideProgress() {
     document.getElementById('progressCard').classList.remove('show');
 }
 
-function sha1ish(str) {
-    let h = 0;
-    for (let i = 0; i < str.length; i++) {
-        h = ((h << 5) - h) + str.charCodeAt(i);
-        h |= 0;
+function updateStats(stats) {
+    document.getElementById('totalNotes').textContent = stats.total || 0;
+    document.getElementById('basicNotes').textContent = stats.basic || 0;
+    document.getElementById('clozeNotes').textContent = stats.cloze || 0;
+    document.getElementById('mediaCount').textContent = stats.media || 0;
+    document.getElementById('statsCard').style.display = 'block';
+    
+    // Update deck-specific stats if available
+    if (stats.deckStats) {
+        renderDeckStats(stats.deckStats);
     }
-    return Math.abs(h);
 }
 
-// ===== FILE HANDLING =====
+function renderDeckStats(deckStats) {
+    const container = document.getElementById('deckStatsContainer');
+    if (!deckStats || deckStats.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    let html = '<div class="deck-stats"><h3>📊 Thống kê theo Deck</h3>';
+    
+    deckStats.forEach(deck => {
+        html += `
+            <div class="deck-stat-item">
+                <h4>${deck.name}</h4>
+                <div class="deck-stat-grid">
+                    <div>
+                        <strong>${deck.total}</strong>
+                        <span>Tổng</span>
+                    </div>
+                    <div>
+                        <strong>${deck.basic}</strong>
+                        <span>Basic</span>
+                    </div>
+                    <div>
+                        <strong>${deck.cloze}</strong>
+                        <span>Cloze</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// ===== TAB SWITCHING =====
+
+function switchTab(tabName) {
+    // Update tab buttons
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => btn.classList.remove('active'));
+    event.target.closest('.tab-btn').classList.add('active');
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    if (tabName === 'export') {
+        document.getElementById('exportTab').classList.add('active');
+    } else {
+        document.getElementById('uploadTab').classList.add('active');
+    }
+    
+    // Reset state
+    hideProgress();
+    document.getElementById('statsCard').style.display = 'none';
+}
+
+// ===== TOKEN VISIBILITY =====
+
+function toggleTokenVisibility() {
+    const tokenInput = document.getElementById('notionToken');
+    const toggleIcon = document.getElementById('toggleIcon');
+    
+    if (tokenInput.type === 'password') {
+        tokenInput.type = 'text';
+        toggleIcon.className = 'fas fa-eye-slash';
+    } else {
+        tokenInput.type = 'password';
+        toggleIcon.className = 'fas fa-eye';
+    }
+}
+
+// ===== PAGE MANAGEMENT =====
+
+function extractPageId(input) {
+    // Extract page ID from URL or just return if it's already an ID
+    if (!input) return '';
+    
+    // If it's a URL, extract the ID
+    const urlMatch = input.match(/([a-f0-9]{32})|([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+    if (urlMatch) {
+        return urlMatch[0].replace(/-/g, '');
+    }
+    
+    // Otherwise, assume it's already an ID
+    return input.replace(/-/g, '');
+}
+
+function addPage() {
+    const pageIdInput = document.getElementById('newPageId').value.trim();
+    const deckName = document.getElementById('newPageDeckName').value.trim();
+    const recursive = document.getElementById('newPageRecursive').checked;
+    
+    if (!pageIdInput) {
+        showStatus('Vui lòng nhập Page URL hoặc ID', 'error');
+        return;
+    }
+    
+    if (!deckName) {
+        showStatus('Vui lòng nhập tên sub-deck', 'error');
+        return;
+    }
+    
+    const pageId = extractPageId(pageIdInput);
+    
+    // Check for duplicates
+    if (pages.some(p => p.pageId === pageId)) {
+        showStatus('Page này đã tồn tại trong danh sách', 'warning');
+        return;
+    }
+    
+    const page = {
+        id: nextPageId++,
+        pageId: pageId,
+        deckName: deckName,
+        recursive: recursive
+    };
+    
+    pages.push(page);
+    savePages();
+    renderPages();
+    
+    // Clear form
+    document.getElementById('newPageId').value = '';
+    document.getElementById('newPageDeckName').value = '';
+    document.getElementById('newPageRecursive').checked = true;
+    
+    showStatus('✓ Đã thêm page thành công', 'success');
+}
+
+function deletePage(id) {
+    if (!confirm('Bạn có chắc muốn xóa page này?')) return;
+    
+    pages = pages.filter(p => p.id !== id);
+    savePages();
+    renderPages();
+    showStatus('✓ Đã xóa page', 'success');
+}
+
+function editPage(id) {
+    const page = pages.find(p => p.id === id);
+    if (!page) return;
+    
+    page.editing = true;
+    renderPages();
+}
+
+function savePage(id) {
+    const page = pages.find(p => p.id === id);
+    if (!page) return;
+    
+    const deckName = document.getElementById(`edit-deck-${id}`).value.trim();
+    const recursive = document.getElementById(`edit-recursive-${id}`).checked;
+    
+    if (!deckName) {
+        showStatus('Tên deck không được để trống', 'error');
+        return;
+    }
+    
+    page.deckName = deckName;
+    page.recursive = recursive;
+    page.editing = false;
+    
+    savePages();
+    renderPages();
+    showStatus('✓ Đã lưu thay đổi', 'success');
+}
+
+function cancelEdit(id) {
+    const page = pages.find(p => p.id === id);
+    if (!page) return;
+    
+    page.editing = false;
+    renderPages();
+}
+
+function clearAllPages() {
+    if (pages.length === 0) {
+        showStatus('Danh sách đã trống', 'info');
+        return;
+    }
+    
+    if (!confirm('Bạn có chắc muốn xóa tất cả pages?')) return;
+    
+    pages = [];
+    savePages();
+    renderPages();
+    showStatus('✓ Đã xóa tất cả pages', 'success');
+}
+
+function renderPages() {
+    const container = document.getElementById('pagesContainer');
+    const countEl = document.getElementById('pagesCount');
+    const exportBtn = document.getElementById('exportAllBtn');
+    
+    countEl.textContent = pages.length;
+    exportBtn.disabled = pages.length === 0;
+    
+    if (pages.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>Chưa có page nào. Thêm page đầu tiên của bạn!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    pages.forEach(page => {
+        const editClass = page.editing ? 'editing' : '';
+        html += `
+            <div class="page-item ${editClass}">
+                <div class="page-header">
+                    <div class="page-info">
+                        <div class="page-title">
+                            <i class="fas fa-file-alt"></i> ${page.deckName}
+                        </div>
+                        <div class="page-deck-name">
+                            Sub-deck: ${page.deckName}
+                        </div>
+                        <div class="page-id-display">
+                            ID: ${page.pageId.substring(0, 8)}...${page.pageId.substring(page.pageId.length - 4)}
+                        </div>
+                    </div>
+                    <div class="page-actions">
+                        ${!page.editing ? `
+                            <button class="btn-edit" onclick="editPage(${page.id})">
+                                <i class="fas fa-edit"></i> Sửa
+                            </button>
+                            <button class="btn-delete" onclick="deletePage(${page.id})">
+                                <i class="fas fa-trash"></i> Xóa
+                            </button>
+                        ` : `
+                            <button class="btn-save" onclick="savePage(${page.id})">
+                                <i class="fas fa-check"></i> Lưu
+                            </button>
+                            <button class="btn-cancel" onclick="cancelEdit(${page.id})">
+                                <i class="fas fa-times"></i> Hủy
+                            </button>
+                        `}
+                    </div>
+                </div>
+                
+                <div class="page-metadata">
+                    <label>
+                        <i class="fas fa-layer-group"></i>
+                        ${page.recursive ? 'Có subpages' : 'Chỉ page chính'}
+                    </label>
+                </div>
+                
+                ${page.editing ? `
+                    <div class="edit-form show">
+                        <div class="input-group">
+                            <label>Tên Sub-Deck</label>
+                            <input type="text" id="edit-deck-${page.id}" value="${page.deckName}">
+                        </div>
+                        <div class="checkbox-group">
+                            <label>
+                                <input type="checkbox" id="edit-recursive-${page.id}" ${page.recursive ? 'checked' : ''}>
+                                <span>Export đệ quy (bao gồm subpages)</span>
+                            </label>
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// ===== FILE UPLOAD HANDLING =====
+
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 
@@ -60,34 +364,32 @@ dropZone.addEventListener('drop', (e) => {
     
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-        handleFile(files[0]);
+        handleFileUpload(files[0]);
     }
 });
 
 fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
-        handleFile(e.target.files[0]);
+        handleFileUpload(e.target.files[0]);
     }
 });
 
-function handleFile(file) {
+function handleFileUpload(file) {
     uploadedFile = file;
     
-    const fileInfo = document.getElementById('fileInfo');
     document.getElementById('fileName').textContent = file.name;
     document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(2) + ' KB';
     document.getElementById('fileType').textContent = file.name.endsWith('.zip') ? 'ZIP Archive' : 'HTML File';
     
-    fileInfo.classList.add('show');
+    document.getElementById('fileInfo').classList.add('show');
     document.getElementById('processBtn').disabled = false;
     
-    showStatus('File đã được tải lên. Click "Xử lý & Export APKG" để tiếp tục.', 'success');
+    showStatus('File uploaded successfully. Click "Process & Export APKG" to continue.', 'success');
 }
 
-function reset() {
+function resetUpload() {
     uploadedFile = null;
-    parsedNotes = [];
-    mediaFiles = {};
+    currentMediaFiles = {};
     
     fileInput.value = '';
     document.getElementById('fileInfo').classList.remove('show');
@@ -95,496 +397,203 @@ function reset() {
     document.getElementById('processBtn').disabled = true;
     
     hideProgress();
-    showStatus('Đã reset. Hãy upload file mới.', 'info');
+    showStatus('Reset complete. Upload a new file.', 'info');
 }
 
-// ===== HTML PARSING =====
-async function extractHtmlFromZip(zipFile) {
-    const zip = await JSZip.loadAsync(zipFile);
+// ===== EXPORT ALL PAGES FROM NOTION =====
+
+async function exportAllPages() {
+    const token = document.getElementById('notionToken').value.trim();
+    const mainDeckName = document.getElementById('mainDeckName').value.trim() || 'Notion Collection';
     
-    // Find HTML file
-    const htmlFile = Object.keys(zip.files).find(name => name.endsWith('.html'));
-    if (!htmlFile) {
-        throw new Error('Không tìm thấy file HTML trong ZIP');
+    // Validate inputs
+    if (!token) {
+        showStatus('Vui lòng nhập Notion token', 'error');
+        return;
     }
     
-    const htmlContent = await zip.files[htmlFile].async('string');
-    
-    // Extract media files
-    for (const [filename, fileData] of Object.entries(zip.files)) {
-        if (filename.match(/\.(png|jpg|jpeg|gif|webp|mp4|mp3|wav)$/i)) {
-            const blob = await fileData.async('blob');
-            mediaFiles[filename] = blob;
-        }
+    if (pages.length === 0) {
+        showStatus('Vui lòng thêm ít nhất một page', 'error');
+        return;
     }
     
-    return htmlContent;
-}
-
-function parseHtmlToNotes(html) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    
-    const notes = [];
-    
-    // Find all toggle blocks (Notion toggles)
-    const toggles = doc.querySelectorAll('details');
-    
-    toggles.forEach((toggle, index) => {
-        try {
-            const summary = toggle.querySelector('summary');
-            if (!summary) return;
+    try {
+        showStatus('Bắt đầu export từ Notion...', 'info');
+        updateProgress(0, 'Đang khởi tạo...');
+        
+        let allNotes = [];
+        let allMedia = {};
+        const deckStats = [];
+        
+        // Export each page
+        for (let i = 0; i < pages.length; i++) {
+            const page = pages[i];
+            const progress = ((i / pages.length) * 80).toFixed(0);
             
-            const front = summary.textContent.trim();
-            if (!front) return;
+            updateProgress(progress, `Đang export page ${i + 1}/${pages.length}: ${page.deckName}...`);
             
-            // Get back content (everything after summary)
-            let back = '';
-            const contentElements = Array.from(toggle.children).filter(el => el.tagName !== 'SUMMARY');
-            
-            contentElements.forEach(el => {
-                back += el.outerHTML || el.textContent;
-            });
-            
-            // Auto-detect note type
-            const isCloze = detectCloze(front + ' ' + back);
-            
-            // Extract media
-            const media = extractMedia(toggle);
-            
-            notes.push({
-                front: front,
-                back: back.trim(),
-                isCloze: isCloze,
-                media: media,
-                tags: []
-            });
-        } catch (err) {
-            console.error('Error parsing toggle:', err);
+            try {
+                // Export from Notion
+                const { html, media } = await exportPageFromNotion(token, page.pageId, page.recursive);
+                
+                // Parse notes
+                const parsedNotes = parseHtmlToNotes(html);
+                
+                // Add deck name to each note
+                const deckName = `${mainDeckName}::${page.deckName}`;
+                parsedNotes.forEach(note => {
+                    note.deck = deckName;
+                });
+                
+                allNotes = allNotes.concat(parsedNotes);
+                
+                // Merge media
+                Object.assign(allMedia, media);
+                
+                // Track stats for this deck
+                const basicCount = parsedNotes.filter(n => !n.isCloze).length;
+                const clozeCount = parsedNotes.filter(n => n.isCloze).length;
+                
+                deckStats.push({
+                    name: page.deckName,
+                    total: parsedNotes.length,
+                    basic: basicCount,
+                    cloze: clozeCount
+                });
+                
+            } catch (error) {
+                console.error(`Error exporting page ${page.deckName}:`, error);
+                showStatus(`⚠️ Lỗi khi export page "${page.deckName}": ${error.message}`, 'warning');
+                // Continue with other pages
+            }
         }
-    });
-    
-    return notes;
-}
-
-function detectCloze(text) {
-    // Detect Anki cloze pattern: {{c1::text}}
-    const clozePattern = /\{\{c\d+::.+?\}\}/;
-    return clozePattern.test(text);
-}
-
-function extractMedia(element) {
-    const media = [];
-    
-    const images = element.querySelectorAll('img');
-    images.forEach(img => {
-        const src = img.getAttribute('src');
-        if (src) {
-            media.push({
-                type: 'image',
-                src: src,
-                filename: src.split('/').pop()
-            });
+        
+        if (allNotes.length === 0) {
+            hideProgress();
+            showStatus('Không tìm thấy toggle blocks nào. Vui lòng sử dụng toggle blocks trong Notion pages.', 'error');
+            return;
         }
-    });
-    
-    const videos = element.querySelectorAll('video');
-    videos.forEach(video => {
-        const src = video.getAttribute('src');
-        if (src) {
-            media.push({
-                type: 'video',
-                src: src,
-                filename: src.split('/').pop()
-            });
+        
+        // Update stats
+        const basicCount = allNotes.filter(n => !n.isCloze).length;
+        const clozeCount = allNotes.filter(n => n.isCloze).length;
+        
+        updateStats({
+            total: allNotes.length,
+            basic: basicCount,
+            cloze: clozeCount,
+            media: Object.keys(allMedia).length,
+            deckStats: deckStats
+        });
+        
+        updateProgress(90, 'Đang xây dựng APKG...');
+        
+        // Build APKG
+        const result = await buildApkg(allNotes, allMedia, mainDeckName);
+        
+        hideProgress();
+        showStatus(`✓ Thành công! Đã export ${result.noteCount} notes từ ${pages.length} pages vào ${result.filename}`, 'success');
+        
+    } catch (error) {
+        console.error('Export error:', error);
+        hideProgress();
+        
+        let errorMessage = error.message;
+        
+        // Provide helpful error messages
+        if (errorMessage.includes('CORS')) {
+            errorMessage += '\n\n💡 Tip: Do hạn chế CORS của trình duyệt, export trực tiếp có thể không hoạt động. Vui lòng:\n1. Sử dụng tab "Upload ZIP/HTML" và upload file đã export từ Notion, HOẶC\n2. Sử dụng backend server của chúng tôi (xem README để cài đặt)';
         }
-    });
-    
-    return media;
-}
-
-// ===== ANKI APKG BUILDER =====
-async function ensureSqlReady() {
-    if (SQL_INSTANCE) return SQL_INSTANCE;
-    
-    if (typeof initSqlJs === 'undefined') {
-        throw new Error('sql.js chưa được tải');
+        
+        showStatus(`❌ Lỗi: ${errorMessage}`, 'error');
     }
-    
-    SQL_INSTANCE = await initSqlJs({
-        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-    });
-    
-    return SQL_INSTANCE;
 }
 
-function buildFieldObjects(names) {
-    return names.map((name, idx) => ({
-        name,
-        ord: idx,
-        sticky: false,
-        rtl: false,
-        font: "Arial",
-        size: 20,
-        description: "",
-        plainText: false,
-        collapsed: false,
-        excludeFromSearch: false,
-        media: []
-    }));
-}
+// ===== PROCESS UPLOADED FILE =====
 
-async function buildApkg(notes, deckName) {
-    updateProgress(10, 'Khởi tạo SQLite database...');
-    
-    await ensureSqlReady();
-    
-    if (typeof JSZip === 'undefined') {
-        throw new Error('JSZip chưa được tải');
-    }
-    
-    updateProgress(20, 'Tạo cấu trúc database...');
-    
-    const nowMs = Date.now();
-    const nowSec = Math.floor(nowMs / 1000);
-    
-    const SQL = SQL_INSTANCE;
-    const db = new SQL.Database();
-    
-    // Create tables
-    db.run(`CREATE TABLE col (id INTEGER PRIMARY KEY, crt INTEGER NOT NULL, mod INTEGER NOT NULL, scm INTEGER NOT NULL, ver INTEGER NOT NULL, dty INTEGER NOT NULL, usn INTEGER NOT NULL, ls INTEGER NOT NULL, conf TEXT NOT NULL, models TEXT NOT NULL, decks TEXT NOT NULL, dconf TEXT NOT NULL, tags TEXT NOT NULL);`);
-    db.run(`CREATE TABLE notes (id INTEGER PRIMARY KEY, guid TEXT NOT NULL, mid INTEGER NOT NULL, mod INTEGER NOT NULL, usn INTEGER NOT NULL, tags TEXT NOT NULL, flds TEXT NOT NULL, sfld TEXT NOT NULL, csum INTEGER NOT NULL, flags INTEGER NOT NULL, data TEXT NOT NULL);`);
-    db.run(`CREATE TABLE cards (id INTEGER PRIMARY KEY, nid INTEGER NOT NULL, did INTEGER NOT NULL, ord INTEGER NOT NULL, mod INTEGER NOT NULL, usn INTEGER NOT NULL, type INTEGER NOT NULL, queue INTEGER NOT NULL, due INTEGER NOT NULL, ivl INTEGER NOT NULL, factor INTEGER NOT NULL, reps INTEGER NOT NULL, lapses INTEGER NOT NULL, left INTEGER NOT NULL, odue INTEGER NOT NULL, odid INTEGER NOT NULL, flags INTEGER NOT NULL, data TEXT NOT NULL);`);
-    db.run(`CREATE TABLE revlog (id INTEGER PRIMARY KEY, cid INTEGER NOT NULL, usn INTEGER NOT NULL, ease INTEGER NOT NULL, ivl INTEGER NOT NULL, lastIvl INTEGER NOT NULL, factor INTEGER NOT NULL, time INTEGER NOT NULL, type INTEGER NOT NULL);`);
-    db.run(`CREATE TABLE graves (usn INTEGER NOT NULL, oid INTEGER NOT NULL, type INTEGER NOT NULL);`);
-    
-    updateProgress(30, 'Tạo note types...');
-    
-    // Separate notes by type
-    const basicNotes = notes.filter(n => !n.isCloze);
-    const clozeNotes = notes.filter(n => n.isCloze);
-    
-    const models = {};
-    const decks = {
-        "1": {id: 1, mod: 0, name: "Default", usn: 0, lrnToday: [0, 0], revToday: [0, 0], newToday: [0, 0], timeToday: [0, 0], collapsed: true, browserCollapsed: true, desc: "", dyn: 0, conf: 1, extendNew: 0, extendRev: 0}
-    };
-    
-    const deckId = nowMs + 1;
-    decks[String(deckId)] = {
-        id: deckId,
-        mod: nowSec,
-        name: deckName,
-        usn: -1,
-        lrnToday: [0, 0],
-        revToday: [0, 0],
-        newToday: [0, 0],
-        timeToday: [0, 0],
-        collapsed: false,
-        browserCollapsed: false,
-        desc: "",
-        dyn: 0,
-        conf: 1,
-        extendNew: 0,
-        extendRev: 0
-    };
-    
-    // Basic model
-    if (basicNotes.length > 0) {
-        const basicModelId = nowMs;
-        models[basicModelId] = {
-            id: basicModelId,
-            name: "Notion2Anki-Basic",
-            type: 0,
-            mod: nowSec,
-            usn: -1,
-            sortf: 0,
-            did: deckId,
-            tmpls: [{
-                name: "Card 1",
-                ord: 0,
-                qfmt: "{{Front}}",
-                afmt: "{{FrontSide}}<hr id=answer>{{Back}}",
-                bqfmt: "",
-                bafmt: "",
-                did: null,
-                bfont: "",
-                bsize: 0,
-                id: 0
-            }],
-            flds: buildFieldObjects(["Front", "Back"]),
-            css: `.card {
- font-family: arial;
- font-size: 20px;
- text-align: center;
- color: black;
- background-color: white;
-}`,
-            latexPre: "",
-            latexPost: "",
-            latexsvg: false,
-            req: [[0, "all", [0]]]
-        };
-    }
-    
-    // Cloze model
-    if (clozeNotes.length > 0) {
-        const clozeModelId = nowMs + 100;
-        models[clozeModelId] = {
-            id: clozeModelId,
-            name: "Notion2Anki-Cloze",
-            type: 1, // Cloze type
-            mod: nowSec,
-            usn: -1,
-            sortf: 0,
-            did: deckId,
-            tmpls: [{
-                name: "Cloze",
-                ord: 0,
-                qfmt: "{{cloze:Text}}",
-                afmt: "{{cloze:Text}}<br>{{Extra}}",
-                bqfmt: "",
-                bafmt: "",
-                did: null,
-                bfont: "",
-                bsize: 0,
-                id: 0
-            }],
-            flds: buildFieldObjects(["Text", "Extra"]),
-            css: `.card {
- font-family: arial;
- font-size: 20px;
- text-align: center;
- color: black;
- background-color: white;
-}
-.cloze {
- font-weight: bold;
- color: blue;
-}`,
-            latexPre: "",
-            latexPost: "",
-            latexsvg: false,
-            req: [[0, "any", [0]]]
-        };
-    }
-    
-    updateProgress(40, 'Tạo configuration...');
-    
-    const conf = {
-        schedVer: 2,
-        sched2021: true,
-        addToCur: true,
-        sortBackwards: false,
-        dueCounts: true,
-        collapseTime: 1200,
-        estTimes: true,
-        nextPos: 1,
-        sortType: "noteFld",
-        activeDecks: [deckId],
-        newSpread: 0,
-        timeLim: 0,
-        curDeck: deckId,
-        curModel: Object.keys(models)[0] ? parseInt(Object.keys(models)[0]) : deckId,
-        dayLearnFirst: false,
-        creationOffset: -420
-    };
-    
-    const dconf = {
-        1: {
-            id: 1,
-            mod: 0,
-            name: "Default",
-            usn: 0,
-            maxTaken: 60,
-            autoplay: true,
-            timer: 0,
-            replayq: true,
-            new: {bury: false, delays: [1, 10], initialFactor: 2500, ints: [1, 4, 0], order: 1, perDay: 20},
-            rev: {bury: false, ease4: 1.3, ivlFct: 1, maxIvl: 36500, perDay: 200, hardFactor: 1.2},
-            lapse: {delays: [10], leechAction: 1, leechFails: 8, minInt: 1, mult: 0}
-        }
-    };
-    
-    db.run(`INSERT INTO col VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`, [
-        1, nowSec, nowSec, nowSec, 11, 0, 0, 0,
-        JSON.stringify(conf),
-        JSON.stringify(models),
-        JSON.stringify(decks),
-        JSON.stringify(dconf),
-        "{}"
-    ]);
-    
-    updateProgress(50, `Thêm ${notes.length} notes...`);
-    
-    // Add notes and cards
-    let noteIndex = 0;
-    
-    // Add basic notes
-    const basicModelId = nowMs;
-    basicNotes.forEach((note, idx) => {
-        const noteId = nowMs + 1000 + noteIndex;
-        const cardId = nowMs + 500000 + noteIndex;
-        
-        const fields = [note.front, note.back];
-        const sfld = fields[0] || '';
-        const csum = sha1ish(sfld);
-        const guid = 'g' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
-        
-        db.run(`INSERT INTO notes VALUES (?,?,?,?,?,?,?,?,?,?,?)`, [
-            noteId, guid, basicModelId, nowSec, -1, "",
-            fields.join('\u001f'), sfld, csum, 0, "{}"
-        ]);
-        
-        db.run(`INSERT INTO cards VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [
-            cardId, noteId, deckId, 0, nowSec, -1,
-            0, 0, noteIndex + 1,
-            0, 0, 0, 0, 0, 0, 0, 0, "{}"
-        ]);
-        
-        noteIndex++;
-        
-        if (idx % 10 === 0) {
-            updateProgress(50 + (idx / basicNotes.length) * 20, `Thêm basic notes: ${idx}/${basicNotes.length}`);
-        }
-    });
-    
-    // Add cloze notes
-    const clozeModelId = nowMs + 100;
-    clozeNotes.forEach((note, idx) => {
-        const noteId = nowMs + 1000 + noteIndex;
-        
-        // Combine front and back for cloze
-        const clozeText = note.front + (note.back ? '<br>' + note.back : '');
-        const fields = [clozeText, ''];
-        
-        const sfld = fields[0] || '';
-        const csum = sha1ish(sfld);
-        const guid = 'g' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
-        
-        db.run(`INSERT INTO notes VALUES (?,?,?,?,?,?,?,?,?,?,?)`, [
-            noteId, guid, clozeModelId, nowSec, -1, "",
-            fields.join('\u001f'), sfld, csum, 0, "{}"
-        ]);
-        
-        // Cloze cards - count number of cloze deletions
-        const clozeCount = (clozeText.match(/\{\{c\d+::/g) || []).length;
-        const maxCloze = Math.max(1, clozeCount);
-        
-        for (let ord = 0; ord < maxCloze; ord++) {
-            const cardId = nowMs + 500000 + noteIndex * 10 + ord;
-            
-            db.run(`INSERT INTO cards VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [
-                cardId, noteId, deckId, ord, nowSec, -1,
-                0, 0, noteIndex + 1,
-                0, 0, 0, 0, 0, 0, 0, 0, "{}"
-            ]);
-        }
-        
-        noteIndex++;
-        
-        if (idx % 10 === 0) {
-            updateProgress(70 + (idx / clozeNotes.length) * 20, `Thêm cloze notes: ${idx}/${clozeNotes.length}`);
-        }
-    });
-    
-    updateProgress(90, 'Tạo file .apkg...');
-    
-    // Export database and create ZIP
-    const data = db.export();
-    const zip = new JSZip();
-    zip.file("collection.anki2", data);
-    
-    // Add media files
-    const mediaJson = {};
-    let mediaIndex = 0;
-    
-    for (const [filename, blob] of Object.entries(mediaFiles)) {
-        mediaJson[mediaIndex] = filename;
-        zip.file(mediaIndex.toString(), blob);
-        mediaIndex++;
-    }
-    
-    zip.file("media", JSON.stringify(mediaJson));
-    
-    updateProgress(95, 'Nén file...');
-    
-    const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const filename = `notion_${deckName.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_')}_${stamp}_${notes.length}notes.apkg`;
-    
-    const blob = await zip.generateAsync({
-        type: "blob",
-        compression: "DEFLATE",
-        compressionOptions: {level: 9}
-    });
-    
-    updateProgress(100, 'Hoàn tất!');
-    
-    // Download
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-    
-    return filename;
-}
-
-// ===== MAIN PROCESS =====
-async function processAndExport() {
+async function processUploadedFile() {
     if (!uploadedFile) {
         showStatus('Vui lòng upload file trước', 'error');
         return;
     }
     
+    const deckName = document.getElementById('deckNameUpload').value.trim() || 'Notion';
+    
     try {
-        const deckName = document.getElementById('deckName').value.trim() || 'Notion';
-        
-        updateProgress(0, 'Bắt đầu xử lý...');
+        updateProgress(0, 'Đang bắt đầu...');
         
         // Extract HTML
         let html;
+        let media = {};
+        
         if (uploadedFile.name.endsWith('.zip')) {
-            updateProgress(5, 'Giải nén ZIP...');
-            html = await extractHtmlFromZip(uploadedFile);
+            updateProgress(5, 'Đang giải nén ZIP...');
+            
+            const zip = await JSZip.loadAsync(uploadedFile);
+            
+            // Find HTML file
+            const htmlFile = Object.keys(zip.files).find(name => name.endsWith('.html'));
+            if (!htmlFile) {
+                throw new Error('Không tìm thấy file HTML trong ZIP');
+            }
+            
+            html = await zip.files[htmlFile].async('string');
+            
+            // Extract media
+            for (const [filename, fileData] of Object.entries(zip.files)) {
+                if (filename.match(/\.(png|jpg|jpeg|gif|webp|mp4|mp3|wav)$/i)) {
+                    const blob = await fileData.async('blob');
+                    media[filename] = blob;
+                }
+            }
         } else {
             html = await uploadedFile.text();
         }
         
-        updateProgress(10, 'Parse HTML...');
+        updateProgress(10, 'Đang phân tích HTML...');
         
         // Parse notes
-        parsedNotes = parseHtmlToNotes(html);
+        const parsedNotes = parseHtmlToNotes(html);
         
         if (parsedNotes.length === 0) {
             hideProgress();
-            showStatus('Không tìm thấy toggle blocks nào trong file. Hãy đảm bảo bạn đã sử dụng toggle blocks trong Notion.', 'error');
+            showStatus('Không tìm thấy toggle blocks. Vui lòng sử dụng toggle blocks trong Notion page.', 'error');
             return;
         }
         
         // Update stats
         const basicCount = parsedNotes.filter(n => !n.isCloze).length;
         const clozeCount = parsedNotes.filter(n => n.isCloze).length;
-        const mediaCount = Object.keys(mediaFiles).length;
         
-        document.getElementById('totalNotes').textContent = parsedNotes.length;
-        document.getElementById('basicNotes').textContent = basicCount;
-        document.getElementById('clozeNotes').textContent = clozeCount;
-        document.getElementById('mediaCount').textContent = mediaCount;
-        document.getElementById('statsCard').style.display = 'block';
+        updateStats({
+            total: parsedNotes.length,
+            basic: basicCount,
+            cloze: clozeCount,
+            media: Object.keys(media).length
+        });
         
         // Build APKG
-        const filename = await buildApkg(parsedNotes, deckName);
+        const result = await buildApkg(parsedNotes, media, deckName);
         
         hideProgress();
-        showStatus(`✓ Thành công! Đã export ${parsedNotes.length} notes vào file ${filename}`, 'success');
+        showStatus(`✓ Thành công! Đã export ${result.noteCount} notes vào ${result.filename}`, 'success');
         
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Processing error:', error);
         hideProgress();
-        showStatus('Lỗi: ' + error.message, 'error');
+        showStatus(`❌ Lỗi: ${error.message}`, 'error');
     }
 }
 
 // ===== INITIALIZATION =====
-console.log('Notion2Anki Web MVP loaded');
+
+console.log('Notion2Anki Complete Multi-Page loaded successfully');
+console.log('Version: 2.0.0 - Multi-Page Support');
+
+// Load saved pages on startup
+loadPages();
+
+// Show welcome message
+setTimeout(() => {
+    showStatus('Chào mừng đến với Notion2Anki! Chọn tab để bắt đầu.', 'info');
+}, 500);

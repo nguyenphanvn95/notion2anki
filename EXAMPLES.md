@@ -1,343 +1,393 @@
-# Ví dụ sử dụng Notion2Anki Web
+# Ví Dụ Sử Dụng - Notion2Anki Multi-Page
 
-## 📚 Các trường hợp sử dụng
+## 📚 Các ví dụ thực tế
 
-### 1. Học từ vựng
+### Ví dụ 1: Học tiếng Nhật từ đầu
 
-**Notion structure:**
+#### Cấu trúc Notion
 ```
-Page: English Vocabulary
-
-▼ Ubiquitous
-  <b>IPA:</b> /juːˈbɪkwɪtəs/
-  <b>Part of speech:</b> adjective
-  <b>Definition:</b> Present, appearing, or found everywhere
-  <b>Example:</b> Mobile phones are <i>ubiquitous</i> in modern society.
-
-▼ Ephemeral  
-  <b>IPA:</b> /ɪˈfem(ə)r(ə)l/
-  <b>Part of speech:</b> adjective
-  <b>Definition:</b> Lasting for a very short time
-  <b>Example:</b> Fashion trends are often <i>ephemeral</i>.
-
-▼ Pragmatic
-  <b>IPA:</b> /præɡˈmætɪk/
-  <b>Part of speech:</b> adjective
-  <b>Definition:</b> Dealing with things sensibly and realistically
-  <b>Example:</b> We need a <i>pragmatic</i> approach to solve this problem.
+📁 Japanese Learning (Main Page)
+├── 📄 N5 Vocabulary (Page ID: abc123...)
+│   ├── ▶ おはよう
+│   │   Good morning
+│   ├── ▶ ありがとう
+│   │   Thank you
+│   └── ...
+├── 📄 N5 Grammar (Page ID: def456...)
+│   ├── ▶ は particle
+│   │   Topic marker. Example: 私は学生です
+│   └── ...
+└── 📄 Basic Kanji (Page ID: ghi789...)
+    ├── ▶ 日
+    │   Sun, day. Readings: にち、ひ、か
+    └── ...
 ```
 
-**Result:** 3 Basic notes với formatting đẹp
+#### Setup trong Tool
+
+**Bước 1**: Nhập Token
+```
+Notion Token: v02%3Auser_token_goes_here...
+```
+
+**Bước 2**: Nhập Deck Chính
+```
+Main Deck Name: Japanese Study
+```
+
+**Bước 3**: Thêm Pages
+
+Page 1:
+- Page URL/ID: `abc123...` (N5 Vocabulary)
+- Sub-Deck Name: `N5::Vocabulary`
+- Recursive: ☑️
+
+Page 2:
+- Page URL/ID: `def456...` (N5 Grammar)
+- Sub-Deck Name: `N5::Grammar`
+- Recursive: ☑️
+
+Page 3:
+- Page URL/ID: `ghi789...` (Basic Kanji)
+- Sub-Deck Name: `Kanji::N5`
+- Recursive: ☑️
+
+#### Kết quả trong Anki
+```
+Japanese Study/
+├── N5::Vocabulary (50 cards)
+├── N5::Grammar (30 cards)
+└── Kanji::N5 (45 cards)
+Total: 125 cards
+```
 
 ---
 
-### 2. Học lập trình
+### Ví dụ 2: Lập trình Python
 
-**Notion structure:**
+#### Cấu trúc Notion
 ```
-Page: Python Programming
-
-▼ What is a list comprehension in Python?
-  A concise way to create lists.
-  
-  Syntax: <code>[expression for item in iterable]</code>
-  
-  Example:
-  <pre>
-  squares = [x**2 for x in range(10)]
-  # [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
-  </pre>
-
-▼ Explain the difference between == and is
-  <b>==</b> compares values
-  <b>is</b> compares object identity (memory location)
-  
-  Example:
-  <pre>
-  a = [1, 2, 3]
-  b = [1, 2, 3]
-  a == b  # True (same values)
-  a is b  # False (different objects)
-  </pre>
+📁 Python Course
+├── 📄 Basics
+│   ├── ▶ What is a variable?
+│   │   A container for storing data values
+│   ├── ▶ Python uses {{c1::indentation}} to define code blocks
+│   │   Not curly braces like other languages
+│   └── ...
+├── 📄 Data Structures
+│   ├── ▶ List vs Tuple
+│   │   Lists are mutable, tuples are immutable
+│   └── ...
+└── 📄 OOP
+    ├── ▶ What is a class?
+    │   A blueprint for creating objects
+    └── ...
 ```
 
-**Result:** 2 Basic notes với code formatting
+#### Setup
+
+```
+Main Deck: Programming::Python
+```
+
+Pages:
+1. Basics → `Python::Fundamentals`
+2. Data Structures → `Python::Data Structures`
+3. OOP → `Python::OOP`
+
+#### Kết quả
+```
+Programming::Python/
+├── Python::Fundamentals (40 cards)
+├── Python::Data Structures (25 cards)
+└── Python::OOP (30 cards)
+```
 
 ---
 
-### 3. Học lịch sử (Cloze deletions)
+### Ví dụ 3: Ôn thi IELTS
 
-**Notion structure:**
+#### Cấu trúc
 ```
-Page: World History
-
-▼ World War II ended in {{c1::1945}}
-  The war ended after {{c2::atomic bombs}} were dropped on {{c3::Hiroshima}} and {{c4::Nagasaki}}.
-
-▼ {{c1::Christopher Columbus}} discovered America in {{c2::1492}}
-  He was sponsored by {{c3::Spain}} and landed in the {{c4::Bahamas}}.
-
-▼ The {{c1::Industrial Revolution}} began in {{c2::England}} around {{c3::1760}}
-  Key inventions: {{c4::steam engine}}, {{c5::spinning jenny}}, {{c6::power loom}}
+📁 IELTS Preparation
+├── 📄 Vocabulary - Academic
+│   ├── ▶ accumulate
+│   │   (v) to gather or collect, often gradually
+│   │   Example: Data accumulates over time
+│   └── ...
+├── 📄 Vocabulary - General
+│   └── ...
+├── 📄 Grammar Rules
+│   ├── ▶ Present Perfect is used for {{c1::actions started in past}} that {{c2::continue to present}}
+│   └── ...
+├── 📄 Speaking Topics
+│   └── ...
+└── 📄 Writing Templates
+    └── ...
 ```
 
-**Result:** 3 Cloze notes với multiple deletions
+#### Setup
+
+```
+Main Deck: IELTS Preparation
+```
+
+Pages:
+1. Vocabulary - Academic → `Vocabulary::Academic`
+2. Vocabulary - General → `Vocabulary::General`
+3. Grammar Rules → `Grammar`
+4. Speaking Topics → `Speaking`
+5. Writing Templates → `Writing`
 
 ---
 
-### 4. Học công thức (Math/Physics)
+### Ví dụ 4: Lịch sử Việt Nam
 
-**Notion structure:**
+#### Cấu trúc
 ```
-Page: Physics Formulas
-
-▼ Newton's Second Law
-  <b>Formula:</b> F = ma
-  
-  Where:
-  • F = Force (Newtons)
-  • m = mass (kg)  
-  • a = acceleration (m/s²)
-
-▼ Kinetic Energy
-  <b>Formula:</b> KE = ½mv²
-  
-  Where:
-  • KE = Kinetic Energy (Joules)
-  • m = mass (kg)
-  • v = velocity (m/s)
-
-▼ The area of a circle is {{c1::πr²}}
-  Where {{c2::r}} is the {{c3::radius}}
+📁 Vietnamese History
+├── 📄 Ancient Period
+│   ├── ▶ When did the Hùng Kings establish Văn Lang?
+│   │   2879 BC (traditional date)
+│   └── ...
+├── 📄 Medieval Period
+│   ├── ▶ The {{c1::Lý Dynasty}} ruled Vietnam from {{c2::1009}} to {{c3::1225}}
+│   └── ...
+├── 📄 French Colonial
+│   └── ...
+└── 📄 Modern Vietnam
+    └── ...
 ```
 
-**Result:** 2 Basic + 1 Cloze note
+#### Setup
+
+```
+Main Deck: History::Vietnam
+```
+
+Pages:
+1. Ancient Period → `Ancient::Kings`
+2. Medieval Period → `Medieval::Dynasties`
+3. French Colonial → `Colonial::French`
+4. Modern Vietnam → `Modern::20th Century`
 
 ---
 
-### 5. Học ngôn ngữ với ảnh
+### Ví dụ 5: Medical School Study
 
-**Notion structure:**
+#### Cấu trúc
 ```
-Page: Japanese Vocabulary
-
-▼ 猫 (neko)
-  <b>Meaning:</b> Cat
-  <b>Reading:</b> ねこ
-  <img src="cat.jpg">
-
-▼ 犬 (inu)
-  <b>Meaning:</b> Dog  
-  <b>Reading:</b> いぬ
-  <img src="dog.jpg">
+📁 Medical Studies
+├── 📄 Anatomy - Cardiovascular
+│   ├── ▶ The heart has {{c1::four}} chambers
+│   │   2 atria and 2 ventricles
+│   ├── ▶ Largest artery in body?
+│   │   Aorta
+│   └── ...
+├── 📄 Anatomy - Respiratory
+│   └── ...
+├── 📄 Pharmacology - Antibiotics
+│   └── ...
+├── 📄 Pathology - Infections
+│   └── ...
+└── 📄 Clinical Cases
+    └── ...
 ```
 
-**Result:** 2 Basic notes với ảnh (nếu ảnh có trong ZIP)
+#### Setup
+
+```
+Main Deck: Medical School::Year 2
+```
+
+Pages:
+1. Anatomy - Cardiovascular → `Anatomy::Cardiovascular`
+2. Anatomy - Respiratory → `Anatomy::Respiratory`
+3. Pharmacology - Antibiotics → `Pharmacology::Antibiotics`
+4. Pathology - Infections → `Pathology::Infectious`
+5. Clinical Cases → `Clinical::Cases`
 
 ---
 
-### 6. Q&A Style
+## 🎯 Best Practices
 
-**Notion structure:**
+### 1. Tổ chức Deck có hệ thống
+
+**Tốt:**
 ```
-Page: Interview Prep
-
-▼ What is polymorphism?
-  Polymorphism allows objects of different classes to be treated as objects of a common superclass.
-  
-  <b>Types:</b>
-  1. Compile-time (Method Overloading)
-  2. Runtime (Method Overriding)
-
-▼ Explain the SOLID principles
-  <b>S</b> - Single Responsibility Principle
-  <b>O</b> - Open/Closed Principle
-  <b>L</b> - Liskov Substitution Principle
-  <b>I</b> - Interface Segregation Principle
-  <b>D</b> - Dependency Inversion Principle
+Subject::Topic::Subtopic
 ```
 
-**Result:** 2 Basic notes
+**Ví dụ:**
+```
+Math::Calculus::Derivatives
+Math::Calculus::Integrals
+Math::Linear Algebra::Matrices
+```
+
+### 2. Sử dụng Cloze cho thông tin phức tạp
+
+**Thay vì:**
+```
+▶ What are the three types of muscle?
+  Skeletal, smooth, and cardiac
+```
+
+**Tốt hơn:**
+```
+▶ The three types of muscle are {{c1::skeletal}}, {{c2::smooth}}, and {{c3::cardiac}}
+  Additional info here...
+```
+
+### 3. Nhóm nội dung liên quan
+
+**Ví dụ:**
+```
+Chemistry::Organic::Reactions
+Chemistry::Organic::Mechanisms
+Chemistry::Organic::Synthesis
+```
+
+Thay vì rải rác:
+```
+Chemistry::Reactions
+Chemistry::Mechanisms
+Chemistry::Synthesis
+```
 
 ---
 
-## 🎨 Formatting Tips
+## 🔧 Workflow Suggestions
 
-### HTML trong Notion export
+### Workflow 1: Daily Study
 
-Notion export hỗ trợ các HTML tags:
+1. **Sáng**: Tạo toggle blocks trong Notion khi học
+2. **Tối**: Export batch pages về Anki
+3. **Review**: Dùng Anki để ôn tập
 
-- `<b>text</b>` - Bold
-- `<i>text</i>` - Italic
-- `<code>text</code>` - Inline code
-- `<pre>code</pre>` - Code block
-- `<img src="...">` - Image
-- `<ul><li>...</li></ul>` - Lists
+### Workflow 2: Exam Preparation
 
-### Cloze Deletions
+1. **Week 1-2**: Tổng hợp notes trong Notion
+2. **Week 3**: Organize thành pages theo chủ đề
+3. **Week 4**: Export tất cả vào Anki
+4. **Week 5+**: Intensive review với Anki
 
-Cú pháp:
-```
-{{c1::answer}}        - Cloze deletion 1
-{{c2::answer}}        - Cloze deletion 2
-{{c1::answer::hint}}  - With hint
-```
+### Workflow 3: Language Learning
 
-Ví dụ:
-```
-▼ The capital of {{c1::France}} is {{c2::Paris}}
-```
-→ Tạo 2 cards:
-- Card 1: "The capital of [...] is Paris"
-- Card 2: "The capital of France is [...]"
+**Daily:**
+- Add new vocab vào Notion
+- Update grammar rules
 
----
+**Weekly:**
+- Export new pages
+- Import vào Anki deck
 
-## 📊 Statistics Example
-
-Nếu bạn có 50 toggle blocks:
-- 30 Basic notes
-- 20 Cloze notes (mỗi cái có 3 deletions trung bình)
-
-**Result:**
-- Total notes: 50
-- Total cards: 30 + (20 × 3) = 90 cards
-- Deck: 1 deck với 90 cards
+**Monthly:**
+- Review deck structure
+- Reorganize nếu cần
 
 ---
 
-## 🔄 Workflow Example
+## 📝 Template Pages
 
-### Use Case: Học 100 từ vựng IELTS
+### Template 1: Vocabulary Page
 
-1. **Tạo Notion page:**
-   - Title: "IELTS Vocabulary - Band 7-8"
+```
+📄 [Topic] Vocabulary
 
-2. **Thêm toggle blocks:**
-   ```
-   ▼ Word 1
-     Definition, examples, etc.
-   
-   ▼ Word 2
-     ...
-   
-   (repeat 100 times)
-   ```
+▶ word1
+  definition
+  example sentence
+  synonyms: ...
 
-3. **Export:**
-   - Export → HTML → Download ZIP
+▶ word2
+  definition
+  example sentence
 
-4. **Process:**
-   - Upload ZIP → Export APKG
-   - Time: ~10 seconds
+...
+```
 
-5. **Import to Anki:**
-   - Import .apkg
-   - Start reviewing!
+### Template 2: Q&A Page
 
-6. **Update later:**
-   - Thêm 20 từ mới vào Notion
-   - Re-export → Re-import
-   - Anki sẽ merge (không duplicate)
+```
+📄 [Topic] Questions
+
+▶ Question 1?
+  Answer 1
+  Additional explanation...
+
+▶ Question 2?
+  Answer 2
+
+...
+```
+
+### Template 3: Cloze Page
+
+```
+📄 [Topic] Fill-in-blanks
+
+▶ Statement with {{c1::answer1}} and {{c2::answer2}}
+  Context or explanation
+
+▶ Another statement with {{c1::key term}}
+  More info
+
+...
+```
 
 ---
 
-## 💡 Best Practices
+## 🎨 Advanced Examples
 
-### 1. Consistent Structure
+### Example: Multi-level Deck
 
-Giữ format nhất quán:
 ```
-▼ Term/Question
-  Definition/Answer
-  Additional info
-  Examples
-```
+Main: Computer Science Degree
 
-### 2. One Concept Per Card
-
-❌ Bad:
-```
-▼ Python basics
-  Variables, loops, functions, classes...
+Pages:
+1. CS Fundamentals → CS::Fundamentals
+2. Data Structures → CS::Fundamentals::Data Structures
+3. Algorithms → CS::Fundamentals::Algorithms
+4. OOP → CS::Programming::OOP
+5. Databases → CS::Systems::Databases
+6. Networks → CS::Systems::Networks
 ```
 
-✅ Good:
+Result in Anki:
 ```
-▼ What is a variable in Python?
-  A container for storing data values
-
-▼ What is a loop in Python?
-  A way to repeat code multiple times
+Computer Science Degree/
+├── CS::Fundamentals (base concepts)
+├── CS::Fundamentals::Data Structures
+├── CS::Fundamentals::Algorithms
+├── CS::Programming::OOP
+├── CS::Systems::Databases
+└── CS::Systems::Networks
 ```
 
-### 3. Use Images Wisely
+### Example: Cross-subject Study
 
-- Keep images small (<500KB each)
-- Use relevant images
-- Don't overload one page with too many images
+```
+Main: Final Exam 2024
 
-### 4. Test Before Large Export
-
-- Create 5-10 test cards
-- Export & import to Anki
-- Verify formatting
-- Then do full export
+Pages:
+1. Math - Calculus → Math::Calculus
+2. Math - Statistics → Math::Statistics
+3. Physics - Mechanics → Physics::Mechanics
+4. Physics - E&M → Physics::Electromagnetics
+5. Chemistry - Organic → Chemistry::Organic
+```
 
 ---
 
-## 🎯 Advanced: Mixed Content
+## 💡 Pro Tips
 
-**Notion structure:**
-```
-Page: Biology Chapter 1
-
-▼ What is photosynthesis?
-  The process by which plants convert light energy into chemical energy.
-  
-  <b>Equation:</b> 6CO₂ + 6H₂O → C₆H₁₂O₆ + 6O₂
-
-▼ Photosynthesis occurs in {{c1::chloroplasts}}
-  Which contain {{c2::chlorophyll}} that absorbs {{c3::light energy}}
-
-▼ Parts of a plant cell
-  <img src="plant-cell.png">
-  Label: nucleus, chloroplast, cell wall, vacuole
-```
-
-**Result:**
-- 1 Basic (explanation)
-- 1 Cloze (3 cards)
-- 1 Basic with image
-
-Total: 3 notes, 5 cards
+1. **Batch Export**: Tập hợp nhiều pages cùng topic trước khi export
+2. **Naming Convention**: Giữ pattern nhất quán cho dễ quản lý
+3. **Regular Updates**: Export định kỳ thay vì đợi đến cuối
+4. **Backup**: Notion tự động backup, nhưng nên export APKG định kỳ
+5. **Testing**: Export nhỏ trước để test format
 
 ---
 
-## 📱 Real-world Example
-
-Một student học TOEFL có thể:
-
-1. **Notion workspace:**
-   - Page 1: Reading Vocabulary (200 words)
-   - Page 2: Listening Phrases (150 phrases)
-   - Page 3: Speaking Topics (50 topics)
-   - Page 4: Writing Templates (20 templates)
-
-2. **Export process:**
-   - Export each page separately
-   - Or export root page with "Include subpages"
-
-3. **Result:**
-   - 420 notes total
-   - Mix of Basic and Cloze
-   - Organized in 1 master deck or 4 separate decks
-
-4. **Study:**
-   - Review in Anki daily
-   - Update Notion when needed
-   - Re-export periodically
-
----
-
-**Happy Learning! 📚✨**
+Chúc bạn học tập hiệu quả! 📚✨
