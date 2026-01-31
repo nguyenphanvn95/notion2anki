@@ -11,6 +11,7 @@
 // These endpoints are implemented in /api/notion/* (Vercel Functions).
 const NOTION_ENQUEUE_TASK_ENDPOINT = "/api/notion/enqueueTask";
 const NOTION_GET_TASK_ENDPOINT = "/api/notion/getTasks";
+const NOTION_DOWNLOAD_EXPORT_ENDPOINT = "/api/notion/downloadExport";
 const MAX_RETRIES = 600;
 const RETRY_TIME = 1000; // 1 second
 
@@ -41,21 +42,6 @@ function extractPageId(input) {
 
 // Enqueue export task
 async function enqueueExportTask(token, pageId, recursive) {
-    const payload = {
-        task: {
-            eventName: "exportBlock",
-            request: {
-                block: { id: pageId },
-                recursive: recursive,
-                exportOptions: {
-                    exportType: "html",
-                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                    locale: "en",
-                },
-            },
-        },
-    };
-
     let attempts = 0;
     while (attempts < MAX_RETRIES) {
         try {
@@ -65,7 +51,9 @@ async function enqueueExportTask(token, pageId, recursive) {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ token, payload }),
+                // IMPORTANT: our backend expects token + pageId (+ recursive),
+                // and will build the Notion payload server-side (like notion2ankipro addon).
+                body: JSON.stringify({ token, pageId, recursive }),
             });
 
             if (response.status === 401) {
@@ -82,7 +70,7 @@ async function enqueueExportTask(token, pageId, recursive) {
             const data = await response.json();
             
             if (!data.taskId) {
-                throw new Error('No task ID in response');
+                throw new Error(data?.error || 'No task ID in response');
             }
 
             return data.taskId;
@@ -120,6 +108,11 @@ async function getTaskResult(token, taskId) {
             });
 
             const data = await response.json();
+
+            // Our backend may also provide exportURL directly.
+            if (data?.exportURL) {
+                return data.exportURL;
+            }
             
             if (data.results && data.results.length > 0) {
                 const result = data.results[0];
@@ -151,23 +144,64 @@ async function getTaskResult(token, taskId) {
 }
 
 // Download and extract ZIP from URL
+// NOTE: fetching exportURL directly may fail due to CORS in some browsers.
+// We prefer downloading via our backend proxy.
 async function downloadAndExtractZip(url) {
     updateProgress(85, 'Downloading exported file...');
-    
-    const response = await fetch(url);
-    const blob = await response.blob();
+
+    let blob;
+    try {
+        const proxied = await fetch(NOTION_DOWNLOAD_EXPORT_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ exportURL: url }),
+        });
+        if (!proxied.ok) {
+            // Fallback to direct download if proxy fails.
+            throw new Error('proxy download failed');
+        }
+        blob = await proxied.blob();
+    } catch {
+        // Fallback: direct fetch (may work if exportURL has permissive CORS)
+        const response = await fetch(url);
+        blob = await response.blob();
+    }
     
     updateProgress(90, 'Extracting ZIP...');
     
     const zip = await JSZip.loadAsync(blob);
     
-    // Find HTML file
-    const htmlFile = Object.keys(zip.files).find(name => name.endsWith('.html'));
-    if (!htmlFile) {
+    // Find the *main* HTML file.
+    // Notion exports may include multiple HTML files (index + subpages).
+    // Picking the first one often results in missing most toggles.
+    const htmlCandidates = Object.entries(zip.files)
+        .filter(([name, file]) => name.toLowerCase().endsWith('.html') && !file.dir);
+
+    if (htmlCandidates.length === 0) {
         throw new Error('No HTML file found in export');
     }
-    
-    const htmlContent = await zip.files[htmlFile].async('string');
+
+    // Prefer the largest HTML file (usually the main page).
+    let bestName = htmlCandidates[0][0];
+    let bestSize = 0;
+    for (const [name, file] of htmlCandidates) {
+        // JSZip internal size metadata may not always exist, so we use a safe fallback.
+        const size = file?._data?.uncompressedSize || file?._data?.compressedSize || 0;
+        if (size > bestSize) {
+            bestSize = size;
+            bestName = name;
+        }
+    }
+
+    // If metadata is missing (size=0), fall back to choosing the deepest (non-index) HTML.
+    if (bestSize === 0) {
+        const nonIndex = htmlCandidates
+            .map(([n]) => n)
+            .filter(n => !n.toLowerCase().endsWith('index.html'));
+        bestName = (nonIndex[0] || bestName);
+    }
+
+    const htmlContent = await zip.files[bestName].async('string');
     
     // Extract media files
     const media = {};
