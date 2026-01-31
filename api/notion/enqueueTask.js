@@ -1,71 +1,79 @@
 // /api/notion/enqueueTask.js
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const { token, pageId } = req.body;
+    const { token, pageId, recursive = true, timeZone = "Asia/Ho_Chi_Minh", locale = "en" } = req.body || {};
 
     if (!token || !pageId) {
-      return res.status(400).json({
-        error: "Missing token or pageId"
-      });
+      return res.status(400).json({ error: "Missing token or pageId" });
     }
 
-    // ⚠️ Payload chuẩn theo Notion schema mới
+    // ✅ Payload theo đúng addon notion2ankipro
     const payload = {
       task: {
         eventName: "exportBlock",
         request: {
-          blockId: pageId,
-          recursive: true,
+          block: { id: pageId },
+          recursive: !!recursive,
           exportOptions: {
             exportType: "html",
-            locale: "en",
-            timeZone: "Asia/Ho_Chi_Minh"
-          }
-        }
-      }
+            timeZone,
+            locale,
+          },
+        },
+      },
     };
 
-    const notionRes = await fetch(
-      "https://www.notion.so/api/v3/enqueueTask",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Cookie": `token_v2=${token}`,
-          "User-Agent": "Mozilla/5.0"
-        },
-        body: JSON.stringify(payload)
-      }
-    );
+    const notionRes = await fetch("https://www.notion.so/api/v3/enqueueTask", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Cookie": `token_v2=${token}`,
 
-    const data = await notionRes.json();
+        // ✅ một số header giúp giống browser hơn (không hại, đôi khi giúp)
+        "User-Agent": "Mozilla/5.0",
+        "Origin": "https://www.notion.so",
+        "Referer": "https://www.notion.so/",
+      },
+      body: JSON.stringify(payload),
+    });
 
-    // ✅ Với schema mới, taskId nằm trong taskId hoặc taskIds[0]
-    const taskId =
-      data?.taskId ||
-      (Array.isArray(data?.taskIds) ? data.taskIds[0] : null);
+    const status = notionRes.status;
+    const text = await notionRes.text(); // 🔥 đọc raw text trước
+    let data = null;
 
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
+
+    // ✅ taskId chuẩn theo Notion internal API
+    const taskId = data?.taskId || (Array.isArray(data?.taskIds) ? data.taskIds[0] : null);
+
+    // Trả nguyên status + raw để debug triệt để
     if (!taskId) {
       return res.status(500).json({
         error: "Notion did not return taskId",
-        raw: data
+        notion_status: status,
+        notion_text: text?.slice(0, 2000) || "", // giới hạn log
+        payload_sent: payload,
       });
     }
 
     return res.status(200).json({
       taskId,
-      raw: data
+      raw: data,
     });
-
   } catch (err) {
     console.error("enqueueTask error:", err);
     return res.status(500).json({
       error: "Internal server error",
-      detail: err.message
+      detail: err?.message || String(err),
     });
   }
 }
