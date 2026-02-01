@@ -11,7 +11,6 @@
 // These endpoints are implemented in /api/notion/* (Vercel Functions).
 const NOTION_ENQUEUE_TASK_ENDPOINT = "/api/notion/enqueueTask";
 const NOTION_GET_TASK_ENDPOINT = "/api/notion/getTasks";
-const NOTION_DOWNLOAD_EXPORT_ENDPOINT = "/api/notion/downloadExport";
 const MAX_RETRIES = 600;
 const RETRY_TIME = 1000; // 1 second
 
@@ -40,7 +39,7 @@ function extractPageId(input) {
     return null;
 }
 
-// Enqueue export task
+// Enqueue export task (via same-origin proxy)
 async function enqueueExportTask(token, pageId, recursive) {
     let attempts = 0;
     while (attempts < MAX_RETRIES) {
@@ -51,9 +50,13 @@ async function enqueueExportTask(token, pageId, recursive) {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // IMPORTANT: our backend expects token + pageId (+ recursive),
-                // and will build the Notion payload server-side (like notion2ankipro addon).
-                body: JSON.stringify({ token, pageId, recursive }),
+                body: JSON.stringify({
+                    token,
+                    pageId,
+                    recursive: !!recursive,
+                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    locale: 'en',
+                }),
             });
 
             if (response.status === 401) {
@@ -70,7 +73,7 @@ async function enqueueExportTask(token, pageId, recursive) {
             const data = await response.json();
             
             if (!data.taskId) {
-                throw new Error(data?.error || 'No task ID in response');
+                throw new Error('No task ID in response');
             }
 
             return data.taskId;
@@ -108,11 +111,6 @@ async function getTaskResult(token, taskId) {
             });
 
             const data = await response.json();
-
-            // Our backend may also provide exportURL directly.
-            if (data?.exportURL) {
-                return data.exportURL;
-            }
             
             if (data.results && data.results.length > 0) {
                 const result = data.results[0];
@@ -143,77 +141,10 @@ async function getTaskResult(token, taskId) {
     throw new Error('Export task timeout. The page might be too large.');
 }
 
-// Download and extract ZIP from URL
-// NOTE: fetching exportURL directly may fail due to CORS in some browsers.
-// We prefer downloading via our backend proxy.
-async function downloadAndExtractZip(url, token) {
-    updateProgress(85, 'Downloading exported file...');
-
-    // Always download via backend proxy to avoid CORS.
-    // Some Notion export URLs require a valid session cookie; we pass token to backend.
-    const proxied = await fetch(NOTION_DOWNLOAD_EXPORT_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ exportURL: url, token }),
-    });
-
-    if (!proxied.ok) {
-        let errText = '';
-        try { errText = await proxied.text(); } catch {}
-        throw new Error(`Failed to download export via proxy (${proxied.status}). ${errText}`);
-    }
-
-    const blob = await proxied.blob();
-    
-    updateProgress(90, 'Extracting ZIP...');
-    
-    const zip = await JSZip.loadAsync(blob);
-    
-    // Find the *main* HTML file.
-    // Notion exports may include multiple HTML files (index + subpages).
-    // Picking the first one often results in missing most toggles.
-    const htmlCandidates = Object.entries(zip.files)
-        .filter(([name, file]) => name.toLowerCase().endsWith('.html') && !file.dir);
-
-    if (htmlCandidates.length === 0) {
-        throw new Error('No HTML file found in export');
-    }
-
-    // Prefer the largest HTML file (usually the main page).
-    let bestName = htmlCandidates[0][0];
-    let bestSize = 0;
-    for (const [name, file] of htmlCandidates) {
-        // JSZip internal size metadata may not always exist, so we use a safe fallback.
-        const size = file?._data?.uncompressedSize || file?._data?.compressedSize || 0;
-        if (size > bestSize) {
-            bestSize = size;
-            bestName = name;
-        }
-    }
-
-    // If metadata is missing (size=0), fall back to choosing the deepest (non-index) HTML.
-    if (bestSize === 0) {
-        const nonIndex = htmlCandidates
-            .map(([n]) => n)
-            .filter(n => !n.toLowerCase().endsWith('index.html'));
-        bestName = (nonIndex[0] || bestName);
-    }
-
-    const htmlContent = await zip.files[bestName].async('string');
-    
-    // Extract media files
-    const media = {};
-    for (const [filename, fileData] of Object.entries(zip.files)) {
-        if (filename.match(/\.(png|jpg|jpeg|gif|webp|mp4|mp3|wav)$/i)) {
-            const blob = await fileData.async('blob');
-            media[filename] = blob;
-        }
-    }
-    
-    return { html: htmlContent, media: media };
-}
-
-// Export page from Notion
+// Export page from Notion and return exportURL.
+// NOTE: We intentionally do NOT download the ZIP on the server, because Notion often blocks
+// cloud/serverless IPs (403). Instead, the browser will open the exportURL for the user to download,
+// then the user uploads the ZIP back into this app for processing.
 async function exportPageFromNotion(token, pageUrl, recursive) {
     updateProgress(5, 'Initializing...');
     
@@ -232,7 +163,5 @@ async function exportPageFromNotion(token, pageUrl, recursive) {
         throw new Error('No export URL returned');
     }
     
-    const { html, media } = await downloadAndExtractZip(exportUrl, token);
-    
-    return { html, media };
+    return { exportUrl, taskId, pageId };
 }

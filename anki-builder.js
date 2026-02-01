@@ -229,6 +229,9 @@ function buildFieldObjects(names) {
 }
 
 // Build APKG file
+// Build an APKG with support for per-note deck paths.
+// - deckName: main deck name (string)
+// - notes[i].deck (optional): full deck path like "Main::Sub".
 async function buildApkg(notes, mediaFiles, deckName) {
     updateProgress(10, 'Initializing SQLite...');
     
@@ -266,22 +269,44 @@ async function buildApkg(notes, mediaFiles, deckName) {
     const basicNotes = notes.filter(n => !n.isCloze);
     const clozeNotes = notes.filter(n => n.isCloze);
     
-    // Handle deck hierarchy (Main::Sub)
-    const deckParts = deckName.split('::');
+    // ----- Decks (support per-note deck paths) -----
+    // Collect all deck paths used by notes.
+    const mainDeck = (deckName || 'Notion').trim() || 'Notion';
+    const usedDeckPaths = new Set([mainDeck]);
+    (notes || []).forEach(n => {
+        if (n && typeof n.deck === 'string' && n.deck.trim()) {
+            usedDeckPaths.add(n.deck.trim());
+        }
+    });
+
+    // For every deck path, ensure all its parents exist.
+    const allDeckPaths = new Set();
+    for (const path of usedDeckPaths) {
+        const parts = path.split('::').map(s => s.trim()).filter(Boolean);
+        let cur = '';
+        for (const p of parts) {
+            cur = cur ? `${cur}::${p}` : p;
+            allDeckPaths.add(cur);
+        }
+    }
+
+    // Sort by depth so parents are created before children.
+    const sortedDeckPaths = Array.from(allDeckPaths).sort((a, b) => {
+        const da = a.split('::').length;
+        const db = b.split('::').length;
+        return da - db || a.localeCompare(b);
+    });
+
     const decks = {};
-    
-    // Create parent decks
-    let currentDeckName = '';
-    let parentDeckId = null;
-    
-    deckParts.forEach((part, index) => {
-        currentDeckName = currentDeckName ? `${currentDeckName}::${part}` : part;
-        const deckId = nowMs + index;
-        
+    const deckNameToId = new Map();
+    let deckCounter = 0;
+    for (const name of sortedDeckPaths) {
+        const deckId = nowMs + deckCounter;
+        deckCounter += 1;
         decks[deckId] = {
             id: deckId,
             mod: nowSec,
-            name: currentDeckName,
+            name,
             usn: -1,
             lrnToday: [0, 0],
             revToday: [0, 0],
@@ -295,11 +320,14 @@ async function buildApkg(notes, mediaFiles, deckName) {
             extendNew: 0,
             extendRev: 0
         };
-        
-        parentDeckId = deckId;
-    });
-    
-    const targetDeckId = parentDeckId || nowMs;
+        deckNameToId.set(name, deckId);
+    }
+
+    const mainDeckId = deckNameToId.get(mainDeck) || nowMs;
+    const getDidForNote = (note) => {
+        const name = (note && note.deck && String(note.deck).trim()) ? String(note.deck).trim() : mainDeck;
+        return deckNameToId.get(name) || mainDeckId;
+    };
     
     const models = {};
     
@@ -312,7 +340,7 @@ async function buildApkg(notes, mediaFiles, deckName) {
             mod: nowSec,
             usn: -1,
             sortf: 0,
-            did: targetDeckId,
+            did: mainDeckId,
             tmpls: [{
                 name: "Card 1",
                 ord: 0,
@@ -349,7 +377,7 @@ async function buildApkg(notes, mediaFiles, deckName) {
             mod: nowSec,
             usn: -1,
             sortf: 0,
-            did: targetDeckId,
+            did: mainDeckId,
             tmpls: [{
                 name: "Cloze",
                 ord: 0,
@@ -393,11 +421,11 @@ async function buildApkg(notes, mediaFiles, deckName) {
         estTimes: true,
         nextPos: 1,
         sortType: "noteFld",
-        activeDecks: [targetDeckId],
+        activeDecks: [mainDeckId],
         newSpread: 0,
         timeLim: 0,
-        curDeck: targetDeckId,
-        curModel: Object.keys(models)[0] ? parseInt(Object.keys(models)[0]) : targetDeckId,
+        curDeck: mainDeckId,
+        curModel: Object.keys(models)[0] ? parseInt(Object.keys(models)[0]) : mainDeckId,
         dayLearnFirst: false,
         creationOffset: -420
     };
@@ -448,7 +476,7 @@ async function buildApkg(notes, mediaFiles, deckName) {
         ]);
         
         db.run(`INSERT INTO cards VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [
-            cardId, noteId, targetDeckId, 0, nowSec, -1,
+            cardId, noteId, getDidForNote(note), 0, nowSec, -1,
             0, 0, noteIndex + 1,
             0, 0, 0, 0, 0, 0, 0, 0, "{}"
         ]);
@@ -484,7 +512,7 @@ async function buildApkg(notes, mediaFiles, deckName) {
             const cardId = nowMs + 500000 + noteIndex * 10 + ord;
             
             db.run(`INSERT INTO cards VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [
-                cardId, noteId, targetDeckId, ord, nowSec, -1,
+                cardId, noteId, getDidForNote(note), ord, nowSec, -1,
                 0, 0, noteIndex + 1,
                 0, 0, 0, 0, 0, 0, 0, 0, "{}"
             ]);
